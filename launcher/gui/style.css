@@ -310,3 +310,38 @@ body {
     justify-content: center;
     gap: 0.8rem;
 }
+
+
+.title-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 32px;
+    background: transparent;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    z-index: 9999;
+}
+
+
+.drag-region {
+    flex-grow: 1;
+    height: 100%;
+}
+
+.window-controls {
+    display: flex;
+    
+}
+
+.control-btn {
+    width: 45px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    color: white;
+}

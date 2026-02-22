@@ -3,6 +3,32 @@ import ctypes
 import subprocess
 
 class LauncherLogic:
+    def __init__(self):
+        self._window = None
+
+    def set_window(self, window):
+        # Armazena a referência da janela do pywebview
+        self._window = window
+
+    def minimize(self):
+        if self._window:
+            self._window.minimize()
+
+    def close(self):
+       
+        for win in self.all_windows:
+            try:
+                win.destroy()
+            except:
+                pass
+        
+        os._exit(0)
+
+    def toggle_maximize(self):
+        if self._window:
+            
+            self._window.toggle_fullscreen()
+            
     def get_folder_size(self, file_path):
         folder = os.path.dirname(file_path)
         total_size = 0

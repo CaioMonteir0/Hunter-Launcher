@@ -23,20 +23,31 @@ def center_initial_window(window):
     y = int((sh - 360) / 2)
     window.move(x, y)
 
+webview.settings['DRAG_REGION_DIRECT_TARGET_ONLY'] = True
+
 class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
 
     def __init__(self):
+    
         # 1. Inicializa o Database primeiro para garantir que self.app_data_path exista
         DatabaseManager.__init__(self)
         # 2. Inicializa os outros módulos
         SettingsManager.__init__(self, self.app_data_path)
         LauncherLogic.__init__(self)
         CoverManager.__init__(self)
+        self.all_windows = []
         
         self._window = None
 
     def set_window(self, window):
         self._window = window
+        
+        if window not in self.all_windows:
+            self.all_windows.append(window)
+        
+    def add_window(self, window):
+       
+        self.all_windows.append(window)
 
     # --- MÉTODOS DE PONTE (JS -> PYTHON) ---
     
@@ -209,7 +220,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         search_html = os.path.join(current_dir, 'gui', 'search.html')
         search_api = SearchApi(self, game_name)
-        webview.create_window(
+        search_win = webview.create_window(
             f'Buscar Capa: {game_name}', 
             search_html,
             js_api=search_api,
@@ -217,6 +228,8 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
             height=600,
             resizable=False
         )
+        
+        self.add_window(search_win)
         
     
     def center_initial_window(window):
@@ -290,7 +303,7 @@ if __name__ == '__main__':
         js_api=api,
         width=480,
         height=360,
-        frameless=False,          
+        frameless=True,          
         background_color='#000000'
     )
    
