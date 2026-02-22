@@ -1,0 +1,312 @@
+/* --- Configurações Gerais --- */
+body {
+    background-color: #0f172a;
+    color: white;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    scroll-behavior: smooth;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* Customização da Barra de Rolagem */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #334155;
+}
+
+/* --- Estilização dos Cards (Modo Grid) --- */
+.game-card {
+    position: relative;
+    cursor: pointer;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), 
+                box-shadow 0.3s ease, 
+                background-color 0.3s ease;
+}
+
+.game-card:hover {
+    transform: translateY(-10px) !important;
+    box-shadow: 0 20px 40px -10px rgba(37, 99, 235, 0.5);
+    background-color: #26334d;
+}
+
+/* Efeito de carregamento da imagem */
+.game-card-img {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.game-card-img[src] {
+    opacity: 1;
+}
+
+.game-card-img:hover {
+    transform: scale(1.05);
+    transition: transform 0.3s ease;
+    
+}
+
+
+.card-gradient {
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.9) 100%);
+    pointer-events: none; 
+}
+
+.card-gradient > * {
+    pointer-events: auto; 
+}
+
+/* --- Estilização do Modo Lista --- */
+
+.game-card.list-mode {
+    display: flex !important;
+    flex-direction: row;
+    align-items: center;
+    
+    
+    width: 280px !important; 
+    height: 60px !important;  
+    
+    
+    flex: 0 0 auto !important;
+    
+    padding: 0 1rem;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(71, 85, 105, 0.4);
+    border-radius: 0.75rem;
+    gap: 1rem;
+    position: relative;
+    transition: transform 0.2s ease-out, background 0.2s ease, border-color 0.2s ease;
+}
+
+.game-card.list-mode:hover {
+
+    padding-bottom: 0 !important;
+    transform: none !important; 
+    transform: scale(1.03) !important;
+    background: rgba(51, 65, 85, 0.9) !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 20px 40px -10px rgba(37, 99, 235, 0.5) !important;
+     z-index: 50;
+}
+
+
+.game-card.list-mode .aspect-\[2\/3\] {
+    display: none;
+}
+
+
+.game-card.list-mode .card-gradient {
+    position: static !important;
+    background: none !important;
+    display: flex !important;
+    flex-direction: row !important; 
+    justify-content: space-between !important; 
+    align-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 1rem !important;
+}
+
+
+.game-card.list-mode .card-gradient > div:first-child {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    min-width: 0 !important; 
+    flex: 1 !important;
+    margin-bottom: 0 !important; 
+}
+
+.game-card.list-mode h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin: 0;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; 
+}
+
+
+.game-card.list-mode .opacity-0 {
+    opacity: 1 !important;
+    position: static !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 0.75rem !important;
+    align-items: center !important;
+    flex-shrink: 0 !important; 
+    pointer-events: auto !important;
+}
+
+
+.game-card.list-mode .text-xs {
+    display: block !important;
+    font-size: 0.7rem;
+    color: #60a5fa; 
+    opacity: 0.8;
+}
+
+/* --- Componentes UI --- */
+.btn-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Animação para entrada dos cards */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#game-library > div {
+    animation: fadeIn 0.4s ease forwards;
+}
+
+/* Reset e Layout Offline */
+* { box-sizing: border-box; }
+
+#game-library {
+   
+   
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+    gap: 20px;
+    padding: 20px;
+}
+
+#game-library {
+    transition: all 0.3s ease-in-out;
+}
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.justify-between { justify-content: space-between; }
+.items-center { align-items: center; }
+.gap-3 { gap: 0.75rem; }
+.hidden { display: none; }
+
+
+#cover-submenu::before {
+    content: "";
+    position: absolute;
+    left: -20px; 
+    top: 0;
+    width: 20px;
+    height: 100%;
+}
+
+
+.group:hover #cover-submenu {
+    display: block !important;
+    transition-delay: 0s;
+}
+
+#cover-submenu {
+    transition: visibility 0.2s, opacity 0.2s;
+    visibility: hidden;
+    opacity: 0;
+}
+
+.group:hover #cover-submenu {
+    visibility: visible;
+    opacity: 1;
+}
+
+#options-menu {
+    
+    transition: opacity 0.2s ease, transform 0.2s ease !important;
+}
+
+
+#options-menu.hidden {
+    display: none !important;
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+#search-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    
+    width: 40px !important; 
+    height: 40px !important;
+    border-radius: 50% !important;
+    
+    padding: 0 !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+}
+
+#search-wrapper span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+#search-wrapper #search-input {
+    width: 0;
+    opacity: 0;
+    margin: 0;               
+}
+
+#search-wrapper.active {
+    
+    width: 240px !important;
+    border-radius: 20px !important; 
+    justify-content: flex-start;
+    padding-left: 10px !important;
+}
+
+
+#search-wrapper.active #search-input {
+    width: 100%;
+    opacity: 1;
+    margin-left: 8px;        
+}
+
+#grid-view:hover{
+    transform: scale(1.05);
+    transition: transform 0.3s ease;
+    
+}
+
+#grid-view:active{
+    transform: translateY(10px);
+    transition: transform 0.3s ease;
+}
+
+
+
+#trash-button {
+    color: #ffffff; 
+    
+    transition: color 0.3s ease; 
+
+    &:hover {
+        color: #E53E3E;
+    }
+}
+
+#configuration-button{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+}

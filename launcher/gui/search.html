@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #0f172a;
+            color: white;
+            overflow-x: hidden;
+            
+            scrollbar-width: thin;
+            scrollbar-color: #334155 #0f172a;
+        }
+
+        body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        body::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        body::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+
+        .grid-item:hover {
+            border-color: #3b82f6;
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
+        }
+
+        .loading-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .5;
+            }
+        }
+    </style>
+</head>
+
+<body class="p-4">
+    <div class="sticky top-0 bg-[#0f172a] pb-4 z-10">
+        <div class="flex gap-2">
+            <input id="search-input" type="text"
+                class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                placeholder="Nome do jogo..." onkeyup="if(event.key === 'Enter') search()">
+            <button onclick="search()"
+                class="bg-blue-600 px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-500 transition-all active:scale-95">
+                Buscar
+            </button>
+        </div>
+    </div>
+
+    <div id="results" class="grid grid-cols-2 gap-4">
+        <div class="col-span-2 py-20 text-center">
+            <p class="text-slate-500 text-sm">Digite o nome do jogo para buscar capas no SteamGridDB</p>
+        </div>
+    </div>
+
+    <script>
+        // Foca o input automaticamente ao abrir a janela
+        window.onload = () => document.getElementById('search-input').focus();
+
+        async function search() {
+            const input = document.getElementById('search-input');
+            const query = input.value.trim();
+            if (!query) return;
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="col-span-2 py-20 text-center loading-pulse">
+                    <p class="text-blue-400 font-medium">Buscando no SteamGridDB...</p>
+                </div>
+            `;
+
+            try {
+                // Chama a SearchApi no Python
+                const images = await window.pywebview.api.search_steamgrid(query);
+
+                resultsDiv.innerHTML = '';
+
+                if (!images || images.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="col-span-2 py-20 text-center">
+                            <p class="text-red-400">Nenhuma capa encontrada.</p>
+                            <p class="text-slate-500 text-xs mt-1">Verifique sua API Key nas configurações.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                images.forEach(url => {
+                    console.log("Tentando carregar imagem:", url); 
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.className = 'grid-item w-full aspect-[2/3] object-cover rounded-lg border-2 border-transparent cursor-pointer transition-all';
+
+                    // Fallback caso a imagem falhe ao carregar
+                    img.onerror = () => { img.src = 'https://via.placeholder.com/600x900?text=Erro+ao+Carregar'; };
+
+                    img.onclick = () => selectCover(url);
+                    resultsDiv.appendChild(img);
+                });
+            } catch (err) {
+                resultsDiv.innerHTML = `<p class="col-span-2 text-center text-red-500">Erro na conexão.</p>`;
+            }
+        }
+
+        async function selectCover(url) {
+            // Desabilita o clique para evitar múltiplos downloads
+            document.body.style.pointerEvents = 'none';
+
+            const success = await window.pywebview.api.select_online_cover(url);
+
+            if (success) {
+                // Em vez de window.close(), chama um método que fecha a janela via Python
+            } else {
+                // Se falhar, reabilita os cliques
+                document.body.style.pointerEvents = 'all';
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,57 @@
+import os
+import webview
+
+class CoverManager:
+    def change_cover_local(self, game_name):
+        """Abre seletor de arquivos para trocar capa por uma imagem local."""
+        if not game_name:
+            return None
+
+        # O formato correto para o webview: "Descrição (*.ext1;*.ext2)"
+        file_types = ('Imagens (*.jpg;*.png;*.jpeg;*.webp)',) 
+        
+        try:
+            # self._window vem da classe Api que herdará esta
+            result = self._window.create_file_dialog(
+                webview.FileDialog.OPEN, 
+                allow_multiple=False, 
+                file_types=file_types
+            )
+            
+            if result:
+                new_path = result[0].replace('\\', '/')
+                games = self._load_db()
+                for g in games:
+                    if g['name'] == game_name:
+                        g['cover'] = new_path
+                self._save_db(games)
+                return self._get_image_base64(new_path)
+        except Exception as e:
+            print(f"Erro ao trocar capa local: {e}")
+            
+        return None
+    
+   
+    def delete_old_cover(self, path):
+        """Remove o arquivo físico da capa antiga se não for a padrão."""
+        import os
+        try:
+            # Verifica se o arquivo existe e se não é a 'no_cover.png'
+            if path and os.path.exists(path) and "no_cover.png" not in path:
+                os.remove(path)
+                print(f"Arquivo antigo removido: {path}")
+        except Exception as e:
+            print(f"Erro ao deletar arquivo: {e}")
+
+    def update_game_cover(self, game_name, new_path):
+        """Atualiza o banco e gerencia a limpeza do arquivo anterior."""
+        games = self._load_db()
+        for g in games:
+            if g['name'] == game_name:
+                old_path = g.get('cover')
+                # Só deleta se o caminho for realmente diferente
+                if old_path and old_path != new_path:
+                    self.delete_old_cover(old_path)
+                g['cover'] = new_path
+                break
+        self._save_db(games)

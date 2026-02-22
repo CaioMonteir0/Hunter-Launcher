@@ -1,0 +1,22 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build e Distribuição (PyInstaller)
+build/
+dist/
+*.spec
+
+# Ambientes virtuais
+venv/
+.venv/
+env/
+
+# Configurações locais do jogo/launcher
+*.ini
+*.log
+
+# IDEs
+.vscode/
+.idea/
