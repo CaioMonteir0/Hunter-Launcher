@@ -44,8 +44,8 @@ O Hunter Launcher armazena o banco de dados de jogos e as configurações em uma
 
 - **Localização:** `%APPDATA%\HunterLauncher`
 - **Como acessar:**
-  1. Pressione `Win + R` no seu teclado.
-  2. Digite `%APPDATA%\HunterLauncher` e pressione `Enter`.
+  - Pressione `Win + R` no seu teclado.
+  - Digite `%APPDATA%\HunterLauncher` e pressione `Enter`.
 
 Dentro desta pasta, você encontrará:
 - `games.json`: O banco de dados com seus jogos.
