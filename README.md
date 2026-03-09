@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10+-yellow.svg)
 ![Framework](https://img.shields.io/badge/UI-pywebview%20%2B%20Tailwind-informational.svg)
 
-**Hunter Launcher** é um launcher de jogos moderno e leve, focado na estética e na facilidade de organizar sua biblioteca de jogos. Desenvolvido com Python e tecnologias web, ele oferece uma interface fluida e integração com API do [SteamGridDB](https://www.steamgriddb.com/) para a busca de capas.
+**Hunter Launcher** é um launcher de jogos moderno e leve, focado na estética e na facilidade de organizar sua biblioteca de jogos. Desenvolvido com Python e tecnologias web, ele oferece uma interface fluida e integração com API do <a href="https://www.steamgriddb.com/" target="_blank" rel="noopener noreferrer">SteamGridDB</a> para a busca de capas.
 
 
 ![alt text](image.png)
@@ -16,7 +16,7 @@
 - Realize o download do .exe da versão mais atual.
 
 
-## Criando sua conta no [SteamGridDB](https://www.steamgriddb.com/)
+## Criando sua conta no <a href="https://www.steamgriddb.com/" target="_blank" rel="noopener noreferrer">SteamGridDB</a>
 - Crie sua conta e vá para as configurações em `Preferences`
 - Na aba `API` do site, gere sua chave, copie e cole na aba de `API & INTEGRAÇÃO` no menu de configurações do launcher.
 
@@ -29,7 +29,7 @@
 - 🕹️ **Iniciando jogos:** Você pode iniciar os jogos no ícone ▶️ ou com duplo clique no card.
 - 🚀 **Biblioteca Centralizada:** Organize todos os seus jogos em um só lugar.
 - 🔎 **Filtros de busca:** Filtre seus jogos por ordem alfabética ou por tamanho.
-- 🖼️ **Capas Automáticas:** Integração com a API do [SteamGridDB](https://www.steamgriddb.com/) para buscar capas e artes oficiais.
+- 🖼️ **Capas Automáticas:** Integração com a API do <a href="https://www.steamgriddb.com/" target="_blank" rel="noopener noreferrer">SteamGridDB</a> para buscar capas e artes oficiais.
 - 🔎🖼️ **Suporte a busca manual de capas:**
 
      ![alt text](image-2.png)
@@ -85,7 +85,7 @@ Dentro desta pasta, você encontrará:
 
 
 ### 🫡 Caso tenha interesse em conhecer o projeto do SteamGridDB:
-**GitHub: [SteamGridDB](https://github.com/SteamGridDB)**
+**GitHub: <a href="https://github.com/SteamGridDB" target="_blank" rel="noopener noreferrer">SteamGridDB</a>**
 ---
 ### 💼 Projeto desenvolvido por
 
