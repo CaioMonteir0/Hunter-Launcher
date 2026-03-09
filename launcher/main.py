@@ -379,14 +379,15 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         
         if not version or version.lower() == "releases" or version == "null":
             print("[UPDATER] Nenhuma versão válida encontrada.")
+            self.notify("Nenhuma atualização encontrada!", "info")
             return {"available": False}
-        
-        if version.replace("v", "") != self.current_version.replace("v", ""):
-            self.notify(f"Nova versão {version} disponível! Clique em Configurações para atualizar.", "info", "update")
-            return {"available": True, "version": version}
         else:
-            self.notify("O Launcher está na versão mais recente!", "success")
-            return {"available": False, "version": self.current_version}
+            if version.replace("v", "") != self.current_version.replace("v", ""):
+                self.notify(f"Nova versão {version} disponível! Clique em Configurações para atualizar.", "info", "update")
+                return {"available": True, "version": version}
+            else:
+                self.notify("O Launcher está na versão mais recente!", "success")
+                return {"available": False, "version": self.current_version}
             
         
     def start_launcher_update(self):
