@@ -53,6 +53,10 @@ class DatabaseManager:
         except: return []
 
     def _save_db(self, games):
+        # debug
+        import traceback
+        print("--- [DEBUG] SALVANDO NO BANCO ---")
+        traceback.print_stack(limit=3)
         with open(self.db_path, 'w', encoding='utf-8') as f:
             json.dump(games, f, indent=4, ensure_ascii=False)
 

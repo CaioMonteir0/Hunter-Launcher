@@ -61,7 +61,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         LauncherLogic.__init__(self)
         CoverManager.__init__(self)
         self.all_windows = []
-        
+        self.is_fixing_covers = False
         self.updater = Updater(self)
         self.current_version = "1.0.0"
         self.pending_update_url = None
@@ -216,43 +216,52 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         return False
 
     def _auto_fix_covers(self):
-        games = self._load_db()
-        updated = False
+        if self.is_fixing_covers:
+            print("[AUTOFIX] Já existe uma verificação rodando. Abortando.")
+            return
         
-        for g in games:
-            current_cover = g.get('cover', '')
+        self.is_fixing_covers = True
+        try:
+            games = self._load_db()
+            updated = False
             
-           
-            needs_fix = (current_cover == self.no_cover_path or 
-                         not current_cover or 
-                         not os.path.exists(current_cover))
-
-            if needs_fix:
-                print(f"Buscando capa automática para: {g['name']}")
-                searcher = SearchApi(self, g['name'])
-                results = searcher.search_steamgrid(g['name'])
+            for g in games:
+                current_cover = g.get('cover', '')
                 
-                if results and results.get('images'):
-                    # Baixa a nova capa
-                    local_path = searcher.download_and_save_cover(results.get('images', [])[0])
+            
+                needs_fix = (current_cover == self.no_cover_path or 
+                            not current_cover or 
+                            not os.path.exists(current_cover))
+
+                if needs_fix:
+                    print(f"Buscando capa automática para: {g['name']}")
+                    searcher = SearchApi(self, g['name'])
+                    results = searcher.search_steamgrid(g['name'])
                     
-                    if local_path:
-                        # Se já havia um caminho de arquivo que sumiu, limpa por segurança
-                        if current_cover and current_cover != self.no_cover_path:
-                             self.delete_old_cover(current_cover)
-                             
-                        g['cover'] = local_path
-                        updated = True
+                    if results and results.get('images'):
+                        # Baixa a nova capa
+                        local_path = searcher.download_and_save_cover(results.get('images', [])[0])
                         
-                        # Atualiza a interface em tempo real
-                        new_base64 = self._get_image_base64(local_path)
-                        if self._window:
-                            self._window.evaluate_js(
-                                f"if(window.updateCardImage) window.updateCardImage('{g['name']}', '{new_base64}')"
-                            )
-        
-        if updated:
-            self._save_db(games)
+                        if local_path:
+                            # Se já havia um caminho de arquivo que sumiu, limpa por segurança
+                            if current_cover and current_cover != self.no_cover_path:
+                                self.delete_old_cover(current_cover)
+                                
+                            g['cover'] = local_path
+                            updated = True
+                            
+                            # Atualiza a interface em tempo real
+                            new_base64 = self._get_image_base64(local_path)
+                            if self._window:
+                                self._window.evaluate_js(
+                                    f"if(window.updateCardImage) window.updateCardImage('{g['name']}', '{new_base64}')"
+                                )
+            
+            if updated:
+                self._save_db(games)
+                
+        finally:
+            self.is_fixing_covers = False
             
 
     def open_search_window(self, game_name, game_title_or_alias):
