@@ -363,6 +363,10 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         print("[UPDATER] Verificando se há novas versões no GitHub...")
         version = self.updater.check_latest_version()
         
+        if not version or version.lower() == "releases" or version == "null":
+            print("[UPDATER] Nenhuma versão válida encontrada.")
+            return {"available": False}
+        
         if version.replace("v", "") != self.current_version.replace("v", ""):
             self.notify(f"Nova versão {version} disponível! Clique em Configurações para atualizar.", "info", "update")
             return {"available": True, "version": version}
@@ -372,6 +376,10 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         
         print("[UPDATER] Verificando manualmente por atualizações...")
         version = self.updater.check_latest_version()
+        
+        if not version or version.lower() == "releases" or version == "null":
+            print("[UPDATER] Nenhuma versão válida encontrada.")
+            return {"available": False}
         
         if version.replace("v", "") != self.current_version.replace("v", ""):
             self.notify(f"Nova versão {version} disponível! Clique em Configurações para atualizar.", "info", "update")
