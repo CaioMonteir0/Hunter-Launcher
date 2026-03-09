@@ -3,9 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="copyright" content="Caio Monteiro">
+    <meta name="license" content="GPL-3.0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Launcher Local</title>
+    <title>Hunter Launcher</title>
     <script src="tailwind.js"></script>
+    <script type="module" src="model-viewer.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
         .scale-in {
@@ -26,132 +29,148 @@
     </style>
 </head>
 
-<body class="min-h-screen p-8">
+<body class="bg-[#0f172a]">
 
-    <div class="title-bar">
-        <div class="drag-region pywebview-drag-region"></div>
+    <div class="top-content">
 
-        <div class="window-controls">
-            <button title="Minimizar" onclick="window.pywebview.api.minimize()" class="control-btn hover:bg-slate-700">
-                <svg width="12" height="12" viewBox="0 0 12 12">
-                    <rect fill="currentColor" width="10" height="1" x="1" y="6" />
-                </svg>
-            </button>
-            <button id="max-btn" title="Maximize" onclick="toggleMaxIcon()" class="control-btn hover:bg-slate-700">
-                <span id="max-icon-container">
-                    <svg width="12" height="12" viewBox="0 0 12 12">
-                        <rect width="9" height="9" x="1.5" y="1.5" fill="none" stroke="currentColor" stroke-width="1" />
-                    </svg>
-                </span>
-            </button>
-            <button title="Fechar" onclick="window.pywebview.api.close()"
-                class="control-btn hover:bg-red-500 rounded-tr-xl overflow-hidden group">
-                <svg width="14" height="14" viewBox="0 0 12 12">
-                    <path d="M2 2l8 8m0-8l-8 8" fill="none" stroke="currentColor" stroke-width="1.2"
-                        stroke-linecap="round" />
-                </svg>
-            </button>
-        </div>
-    </div>
+        <div class="title-bar">
+            <div class="title">
 
-    <div class="no-drag-region">
-
-        <header class="flex justify-between items-center mb-10">
-            <div>
-                <h1 class="text-3xl font-bold tracking-tight">Minha Biblioteca</h1>
-                <p class="text-slate-400 text-sm">Gerencie seus jogos locais</p>
+                <img id="ui-hunter-icon" width="16px" height="16px" src="icon/hunter-icon.svg" alt="">
+                <h5 class="text-sm tracking-tight">Hunter Launcher</h5>
             </div>
+            <div class="drag-region pywebview-drag-region"></div>
 
-            <div class="flex items-center gap-4">
-                <div class="flex gap-3 border-r border-slate-700/50 pr-4">
-                    <button id="grid-view" onclick="toggleViewMode()" title="Alterar Visualização"
-                        class="btn-nav transition hover:opacity-80 active:scale-95 outline-none flex items-center justify-center">
-                        <svg width="32px" height="32px" viewBox="0 0 24 24" fill="none"
-                            xmlns="http://www.w3.org/2000/svg" id="list-view-svg">
-                            <g stroke="#3b82f6" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-
-                                <rect x="3" y="3" width="7" height="9" rx="2" />
-
-                                <rect x="3" y="15" width="7" height="5" rx="2" />
-
-                                <rect x="14" y="11" width="7" height="9" rx="2" />
-
-                                <rect x="14" y="3" width="7" height="5" rx="2" />
-                            </g>
+            <div class="window-controls">
+                <button title="Minimizar" onclick="window.pywebview.api.minimize()"
+                    class="control-btn hover:bg-slate-700">
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                        <rect fill="currentColor" width="10" height="1" x="1" y="6" />
+                    </svg>
+                </button>
+                <button id="max-btn" title="Maximize" onclick="toggleMaxIcon()" class="control-btn hover:bg-slate-700">
+                    <span id="max-icon-container">
+                        <svg width="12" height="12" viewBox="0 0 12 12">
+                            <rect width="9" height="9" x="1.5" y="1.5" fill="none" stroke="currentColor"
+                                stroke-width="1" />
                         </svg>
-                    </button>
-                    <button onclick="handleAction('ADD_GAME')"
-                        class="bg-transparent border border-slate-700 text-slate-400 p-2 px-6 rounded-lg font-bold transition-all duration-300 hover:bg-blue-600/10 hover:border-blue-500 hover:text-white hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] active:scale-95">
-                        + Adicionar Jogo
-                    </button>
+                    </span>
+                </button>
+                <button title="Fechar" onclick="window.pywebview.api.close()"
+                    class="control-btn hover:bg-red-500 rounded-tr-xl overflow-hidden group">
+                    <svg width="14" height="14" viewBox="0 0 12 12">
+                        <path d="M2 2l8 8m0-8l-8 8" fill="none" stroke="currentColor" stroke-width="1.2"
+                            stroke-linecap="round" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="no-drag-region">
+
+            <header class="flex justify-between items-center mb-10 mt-4">
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tight">Minha Biblioteca</h1>
+                    <p class="text-slate-400 text-sm">Gerencie seus jogos locais</p>
                 </div>
 
-                <button onclick="window.toggleSettings()" id="configuration-button"
-                    class="bg-transparent border border-slate-700 text-slate-400 p-2 px-6 rounded-lg font-bold transition-all duration-300 hover:bg-blue-600/10 hover:border-blue-500 hover:text-white hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] active:scale-95"
-                    title="Configurações">
-                    <span>
-                        <svg fill="currentColor" width="18px" height="18px" viewBox="0 0 200 200" data-name="Layer 1"
-                            id="Layer_1" xmlns="http://www.w3.org/2000/svg">
+                <div class="flex items-center gap-4">
+                    <div class="flex gap-3 border-r border-slate-700/50 pr-4">
+                        <button id="grid-view" onclick="toggleViewMode()" title="Alterar Visualização"
+                            class="btn-nav transition hover:opacity-80 active:scale-95 outline-none flex items-center justify-center">
+                            <svg width="32px" height="32px" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg" id="list-view-svg">
+                                <g stroke="#3b82f6" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+
+                                    <rect x="3" y="3" width="7" height="9" rx="2" />
+
+                                    <rect x="3" y="15" width="7" height="5" rx="2" />
+
+                                    <rect x="14" y="11" width="7" height="9" rx="2" />
+
+                                    <rect x="14" y="3" width="7" height="5" rx="2" />
+                                </g>
+                            </svg>
+                        </button>
+                        <button onclick="handleAction('ADD_GAME')"
+                            class="bg-transparent border border-slate-700 text-slate-400 p-2 px-6 rounded-lg font-bold transition-all duration-300 hover:bg-blue-600/10 hover:border-blue-500 hover:text-white hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] active:scale-95">
+                            + Adicionar Jogo
+                        </button>
+                    </div>
+
+                    <button onclick="window.toggleSettings()" id="configuration-button"
+                        class="bg-transparent border border-slate-700 text-slate-400 p-2 px-6 rounded-lg font-bold transition-all duration-300 hover:bg-blue-600/10 hover:border-blue-500 hover:text-white hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] active:scale-95"
+                        title="Configurações">
+                        <span>
+                            <svg fill="currentColor" width="18px" height="18px" viewBox="0 0 200 200"
+                                data-name="Layer 1" id="Layer_1" xmlns="http://www.w3.org/2000/svg">
+                                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                <g id="SVGRepo_iconCarrier">
+                                    <title></title>
+                                    <path
+                                        d="M36.5,75C41,89.5,54,100,70,100s29-10.5,33.5-25H170a10,10,0,0,0,0-20H103.5C99,40.5,86,30,70,30S41,40.5,36.5,55H25a10,10,0,0,0,0,20ZM70,50A15,15,0,1,1,55,65,14.73,14.73,0,0,1,70,50Zm105,75H163.5C159,110.5,146,100,130,100s-29,10.5-33.5,25H30a10,10,0,0,0,0,20H96.5c4.5,14.5,17.5,25,33.5,25s29-10.5,33.5-25H175a10,10,0,0,0,0-20Zm-45,25a15,15,0,1,1,15-15A14.73,14.73,0,0,1,130,150Z">
+                                    </path>
+                                </g>
+                            </svg> </span>
+                        <span class="hidden md:inline font-medium">Configurações</span>
+                    </button>
+                </div>
+            </header>
+
+            <div
+                class="flex items-center justify-end w-full px-6 py-4 bg-slate-900/30 border-b border-slate-800/50 gap-4">
+                <div id="search-wrapper"
+                    class="group relative flex items-center bg-slate-800 rounded-full px-3 py-1.5 transition-all duration-300 w-10 overflow-hidden border border-slate-700/50 hover:border-blue-500/50 cursor-pointer">
+                    <span class="text-slate-400 select-none">
+                        <svg width="18px" height="18px" viewBox="0 0 24 24" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
                             <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
                             <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
                             <g id="SVGRepo_iconCarrier">
-                                <title></title>
-                                <path
-                                    d="M36.5,75C41,89.5,54,100,70,100s29-10.5,33.5-25H170a10,10,0,0,0,0-20H103.5C99,40.5,86,30,70,30S41,40.5,36.5,55H25a10,10,0,0,0,0,20ZM70,50A15,15,0,1,1,55,65,14.73,14.73,0,0,1,70,50Zm105,75H163.5C159,110.5,146,100,130,100s-29,10.5-33.5,25H30a10,10,0,0,0,0,20H96.5c4.5,14.5,17.5,25,33.5,25s29-10.5,33.5-25H175a10,10,0,0,0,0-20Zm-45,25a15,15,0,1,1,15-15A14.73,14.73,0,0,1,130,150Z">
+                                <path d="M14 5H20" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"
+                                    stroke-linejoin="round"></path>
+                                <path d="M14 8H17" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"
+                                    stroke-linejoin="round"></path>
+                                <path d="M21 11.5C21 16.75 16.75 21 11.5 21C6.25 21 2 16.75 2 11.5C2 6.25 6.25 2 11.5 2"
+                                    stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                                 </path>
+                                <path d="M22 22L20 20" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"
+                                    stroke-linejoin="round"></path>
                             </g>
-                        </svg> </span>
-                    <span class="hidden md:inline font-medium">Configurações</span>
-                </button>
-            </div>
-        </header>
+                        </svg>
+                    </span>
+                    <input type="text" id="search-input" placeholder="Buscar jogo..." oninput="applyFilters()"
+                        class="bg-transparent border-none outline-none text-sm text-white ml-2 w-0 transition-all duration-300 opacity-0">
+                </div>
 
-        <div class="flex items-center justify-end w-full px-6 py-4 bg-slate-900/30 border-b border-slate-800/50 gap-4">
-            <div id="search-wrapper"
-                class="group relative flex items-center bg-slate-800/50 rounded-full px-3 py-1.5 transition-all duration-300 w-10 overflow-hidden border border-slate-700/50 hover:border-blue-500/50 cursor-pointer">
-                <span class="text-slate-400 select-none">
-                    <svg width="18px" height="18px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                        <g id="SVGRepo_iconCarrier">
-                            <path d="M14 5H20" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"
-                                stroke-linejoin="round"></path>
-                            <path d="M14 8H17" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"
-                                stroke-linejoin="round"></path>
-                            <path d="M21 11.5C21 16.75 16.75 21 11.5 21C6.25 21 2 16.75 2 11.5C2 6.25 6.25 2 11.5 2"
-                                stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            </path>
-                            <path d="M22 22L20 20" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"
-                                stroke-linejoin="round"></path>
-                        </g>
-                    </svg>
-                </span>
-                <input type="text" id="search-input" placeholder="Buscar jogo..."
-                    class="bg-transparent border-none outline-none text-sm text-white ml-2 w-0 transition-all duration-300 opacity-0">
-            </div>
+                <div class="relative inline-block text-left" id="sort-dropdown-container">
+                    <button onclick="toggleSortMenu(event)" id="sort-button"
+                        class="bg-slate-800 text-white text-sm rounded-lg border border-slate-700 outline-none p-1.5 cursor-pointer hover:bg-blue-600 hover:border-blue-500 transition px-4 flex items-center gap-2">
+                        <span id="sort-selected-label">A - Z</span>
+                        <span class="text-xs opacity-50">▼</span>
+                    </button>
 
-            <div class="relative inline-block text-left" id="sort-dropdown-container">
-                <button onclick="toggleSortMenu(event)" id="sort-button"
-                    class="bg-slate-800 text-white text-sm rounded-lg border border-slate-700 outline-none p-1.5 cursor-pointer hover:bg-blue-600 hover:border-blue-500 transition px-4 flex items-center gap-2">
-                    <span id="sort-selected-label">A - Z</span>
-                    <span class="text-xs opacity-50">▼</span>
-                </button>
+                    <div id="sort-menu"
+                        class="hidden absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl py-2 text-sm text-white z-[60] animate-in fade-in zoom-in duration-200 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
 
-                <div id="sort-menu"
-                    class="hidden absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl py-2 text-sm text-white z-[60] animate-in fade-in zoom-in duration-200 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-
-                    <button onclick="selectSort('az', 'A - Z')"
-                        class="w-full text-left px-4 py-2 hover:bg-blue-600 transition">A - Z</button>
-                    <button onclick="selectSort('za', 'Z - A')"
-                        class="w-full text-left px-4 py-2 hover:bg-blue-600 transition">Z - A</button>
-                    <button onclick="selectSort('size-desc', 'Maior Tamanho')"
-                        class="w-full text-left px-4 py-2 hover:bg-blue-600 transition">Maior Tamanho</button>
-                    <button onclick="selectSort('size-asc', 'Menor Tamanho')"
-                        class="w-full text-left px-4 py-2 hover:bg-blue-600 transition">Menor Tamanho</button>
+                        <button onclick="selectSort('az', 'A - Z')"
+                            class="w-full text-left px-4 py-2 hover:bg-blue-600 transition">A - Z</button>
+                        <button onclick="selectSort('za', 'Z - A')"
+                            class="w-full text-left px-4 py-2 hover:bg-blue-600 transition">Z - A</button>
+                        <button onclick="selectSort('size-desc', 'Maior Tamanho')"
+                            class="w-full text-left px-4 py-2 hover:bg-blue-600 transition">Maior Tamanho</button>
+                        <button onclick="selectSort('size-asc', 'Menor Tamanho')"
+                            class="w-full text-left px-4 py-2 hover:bg-blue-600 transition">Menor Tamanho</button>
+                    </div>
                 </div>
             </div>
+
         </div>
 
+    </div>
+
+    <div class="main-content">
 
         <main id="game-library"
             class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4 p-6">
@@ -202,22 +221,53 @@
                 </button>
 
                 <div id="cover-submenu"
-                    class="absolute left-[105%] top-0 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl py-2 hidden group-hover:block z-50">
+                    class="absolute top-0 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl py-2 hidden group-hover:block z-50">
                     <button onclick="window.handleCoverChoice('online')"
                         class="w-full text-left px-4 py-2 hover:bg-blue-600 flex items-center gap-2 transition">
-                        <span>🔍</span> Buscar Online
+                        <span>
+                            <svg width="18px" height="18px" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                <g id="SVGRepo_iconCarrier">
+                                    <path d="M14 5H20" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"
+                                        stroke-linejoin="round"></path>
+                                    <path d="M14 8H17" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"
+                                        stroke-linejoin="round"></path>
+                                    <path
+                                        d="M21 11.5C21 16.75 16.75 21 11.5 21C6.25 21 2 16.75 2 11.5C2 6.25 6.25 2 11.5 2"
+                                        stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                    </path>
+                                    <path d="M22 22L20 20" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"
+                                        stroke-linejoin="round"></path>
+                                </g>
+                            </svg>
+                        </span> Buscar Online
                     </button>
                     <button onclick="window.handleCoverChoice('local')"
                         class="w-full text-left px-4 py-2 hover:bg-blue-600 flex items-center gap-2 transition border-t border-slate-700/50">
-                        <span>📁</span> Arquivo Local
+                        <span>
+                            <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 1920 1920"
+                                xmlns="http://www.w3.org/2000/svg" stroke="#ffffff">
+                                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"
+                                    stroke="#CCCCCC" stroke-width="72.96000000000001"></g>
+                                <g id="SVGRepo_iconCarrier">
+                                    <path
+                                        d="m494.165 640.333-278.4 890.774 101.867 31.786L572.459 747h1211.306l-183.36 917.12c-5.013 24.853-26.986 42.88-52.266 42.88H159.979c-29.334 0-53.334-23.893-53.334-53.333v-1440h454.507L732.779 427h760.533v106.667h106.667V320.333H783.872L612.139 107H-.021v1546.667c0 88.213 71.786 160 160 160h1388.16c75.946 0 141.973-54.08 156.906-128.64l208.96-1044.694H494.165Z"
+                                        fill-rule="evenodd"></path>
+                                </g>
+                            </svg>
+                        </span> Arquivo Local
                     </button>
                 </div>
             </div>
 
             <hr class="my-2 border-slate-700/50">
 
-            <button onclick="window.renameGame()"
-                class="w-full text-left px-4 py-2 hover:bg-slate-700 flex items-center gap-2 transition text-slate-300">
+            <button onclick="window.renameGame()" id="change-name-button"
+                class="w-full text-left px-4 py-2 hover:bg-slate-700 flex items-center gap-2 transition text-white">
                 <span>
                     <svg width="18px" height="18px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
@@ -225,15 +275,15 @@
                         <g id="SVGRepo_iconCarrier">
                             <path opacity="0.15" d="M8 16H12L18 10L14 6L8 12V16Z" fill="#ffffff"></path>
                             <path d="M14 6L8 12V16H12L18 10M14 6L17 3L21 7L18 10M14 6L18 10M10 4L4 4L4 20L20 20V14"
-                                stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             </path>
                         </g>
                     </svg>
                 </span> Mudar nome do jogo
             </button>
 
-            <button onclick="window.removeGame('launcher')"
-                class="w-full text-left px-4 py-2 hover:bg-slate-700 flex items-center gap-2 transition text-slate-300">
+            <button onclick="window.removeGame('launcher')" id="remove-from-launcher-button"
+                class="w-full text-left px-4 py-2 hover:bg-slate-700 flex items-center gap-2 transition text-white">
                 <span>
                     <svg width="18px" height="18px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
@@ -241,7 +291,8 @@
                         <g id="SVGRepo_iconCarrier">
                             <path
                                 d="M11 15L9 13M9 13L11 11M9 13H12C12.9319 13 13.3978 13 13.7654 13.1522C14.2554 13.3552 14.6448 13.7446 14.8478 14.2346C15 14.6022 15 15.0681 15 16M18 6L17.1991 18.0129C17.129 19.065 17.0939 19.5911 16.8667 19.99C16.6666 20.3412 16.3648 20.6235 16.0011 20.7998C15.588 21 15.0607 21 14.0062 21H9.99377C8.93927 21 8.41202 21 7.99889 20.7998C7.63517 20.6235 7.33339 20.3412 7.13332 19.99C6.90607 19.5911 6.871 19.065 6.80086 18.0129L6 6M4 6H20M16 6L15.7294 5.18807C15.4671 4.40125 15.3359 4.00784 15.0927 3.71698C14.8779 3.46013 14.6021 3.26132 14.2905 3.13878C13.9376 3 13.523 3 12.6936 3H11.3064C10.477 3 10.0624 3 9.70951 3.13878C9.39792 3.26132 9.12208 3.46013 8.90729 3.71698C8.66405 4.00784 8.53292 4.40125 8.27064 5.18807L8 6"
-                                stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            </path>
                         </g>
                     </svg>
                 </span> Remover do Launcher
@@ -266,9 +317,12 @@
 
         <div id="settings-modal"
             class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-            <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl w-full max-w-md shadow-2xl scale-in">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold flex items-center gap-2"><span>
+            <div
+                class="bg-slate-800 border border-slate-700 rounded-xl w-full max-w-md shadow-2xl scale-in overflow-hidden">
+                <div class="flex justify-between items-center p-6 border-b border-slate-700 bg-slate-800/50">
+                    <h2 class="text-xl font-bold flex items-center gap-2 text-white">
+                        <i class="fas fa-cog text-blue-400">
+
                             <svg fill="currentColor" width="18px" height="18px" viewBox="0 0 200 200"
                                 data-name="Layer 1" id="Layer_1" xmlns="http://www.w3.org/2000/svg">
                                 <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
@@ -279,70 +333,278 @@
                                         d="M36.5,75C41,89.5,54,100,70,100s29-10.5,33.5-25H170a10,10,0,0,0,0-20H103.5C99,40.5,86,30,70,30S41,40.5,36.5,55H25a10,10,0,0,0,0,20ZM70,50A15,15,0,1,1,55,65,14.73,14.73,0,0,1,70,50Zm105,75H163.5C159,110.5,146,100,130,100s-29,10.5-33.5,25H30a10,10,0,0,0,0,20H96.5c4.5,14.5,17.5,25,33.5,25s29-10.5,33.5-25H175a10,10,0,0,0,0-20Zm-45,25a15,15,0,1,1,15-15A14.73,14.73,0,0,1,130,150Z">
                                     </path>
                                 </g>
-                            </svg> </span>
+                            </svg>
+                        </i> Configurações
+                    </h2>
 
-                        </span> Configurações</h2>
-                    <button onclick="window.toggleSettings()" class="text-slate-400 hover:text-white">&times;</button>
-                </div>
-
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-xs text-blue-400 uppercase font-bold tracking-wider">SteamGridDB API
-                            Key</label>
-                        <input id="api-key-input" type="password"
-                            class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 mt-1 focus:border-blue-500 outline-none text-white transition-all"
-                            placeholder="Insira sua chave API aqui...">
-                        <p class="text-[10px] text-slate-500 mt-2">Sua chave é salva localmente em AppData e usada para
-                            buscar capas online.</p>
+                    <div id="close-button-settings" class="">
+                        <button onclick="window.toggleSettings()" class="">
+                            <svg width="14" height="14" viewBox="0 0 12 12">
+                                <path d="M2 2l8 8m0-8l-8 8" fill="none" stroke="currentColor" stroke-width="1.2"
+                                    stroke-linecap="round" />
+                            </svg>
+                        </button>
                     </div>
+
                 </div>
 
-                <div class="flex gap-3 mt-8">
-                    <button onclick="window.toggleSettings()"
-                        class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg font-bold transition-all">
-                        Cancelar
-                    </button>
 
-                    <button onclick="window.saveApiSettings()"
-                        class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-bold transition-all transform active:scale-95">
-                        Salvar Alterações
+
+
+
+                <div class="flex border-b border-slate-700 bg-slate-900/30">
+                    <button onclick="switchTab('api')" id="tab-api"
+                        class="flex-1 py-3 text-xs uppercase font-bold tracking-wider transition-all border-b-2 border-blue-500 text-blue-400">
+                        API & Integração
                     </button>
+                    <button onclick="switchTab('updates')" id="tab-updates"
+                        class="flex-1 py-3 text-xs uppercase font-bold tracking-wider transition-all border-b-2 border-transparent text-slate-400 hover:text-slate-200">
+                        Atualizações
+                    </button>
+                    <button onclick="switchTab('about')" id="tab-about"
+                        class="flex-1 py-3 text-xs uppercase font-bold tracking-wider transition-all border-b-2 border-transparent text-slate-400 hover:text-slate-200">
+                        Sobre o projeto
+                    </button>
+                </div>
+
+                <div class="p-6">
+                    <div id="content-api" class="space-y-4">
+                        <div class="info">
+                            <ul class="space-y-3 text-sm text-slate-400">
+                                <li class="flex items-start">
+                                    <span
+                                        class="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-slate-800 text-xs mr-2">1</span>
+                                    <span title="https://steamgriddb.com/">Acesse o site <a href="javascript:void(0)"
+                                            onclick="window.pywebview.api.open_external_link('https://steamgriddb.com/')"
+                                            class="text-blue-400 font-bold hover:text-blue-300 transition-colors">SteamGridDB</a></span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span
+                                        class="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-slate-800 text-xs mr-2">2</span>
+                                    <span>Crie sua conta e vá para as configurações em <strong
+                                            class="text-slate-200">'Preferences'</strong>.</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span
+                                        class="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-slate-800 text-xs mr-2">3</span>
+                                    <span>Na aba <strong class="text-slate-200">'API'</strong>, gere sua chave, copie e
+                                        cole no campo abaixo.</span>
+                                </li>
+                                <li
+                                    class="mt-4 p-2 bg-blue-500/10 border border-blue-500/20 rounded text-blue-400 text-xs font-semibold flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd"
+                                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                            clip-rule="evenodd"></path>
+                                    </svg>
+                                    Atenção: Nunca compartilhe sua chave pessoal com terceiros.
+                                </li>
+                            </ul>
+
+                        </div>
+
+                        <div class="flex flex-col w-full">
+                            <label class="text-[10px] text-blue-400 uppercase font-bold tracking-wider mb-1">
+                                SteamGridDB API Key
+                            </label>
+
+                            <div class="relative w-full">
+                                <input id="api-key-input" type="password"
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 pr-14 outline-none text-white transition-all text-sm focus:border-blue-500"
+                                    placeholder="Insira sua chave API aqui...">
+
+                                <div id="actions-space" class="absolute right-1 top-1 flex items-center">
+                                    <button id="btn-save-settings" onclick="window.saveApiSettings()"
+                                        title="Salvar API Key"
+                                        class="flex items-center justify-center p-1 bg-transparent rounded-full transition-all duration-300">
+                                        <svg fill="currentColor" width="32px" height="32px" viewBox="0 0 24 24"
+                                            xmlns="http://www.w3.org/2000/svg" stroke="currentColor">
+                                            <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                            <g id="SVGRepo_tracerCarrier" stroke-linecap="round"
+                                                stroke-linejoin="round"></g>
+                                            <g id="SVGRepo_iconCarrier">
+                                                <g id="Save_Down_1" data-name="Save Down 1">
+                                                    <g>
+                                                        <path
+                                                            d="M17.617,6.383a7.944,7.944,0,0,1-1.748,12.568A8.028,8.028,0,0,1,4.283,13.908,8.028,8.028,0,0,1,6.378,6.391c.451-.46-.256-1.168-.707-.707A8.946,8.946,0,0,0,15.427,20.27a8.946,8.946,0,0,0,2.9-14.594c-.451-.461-1.158.247-.707.707Z">
+                                                        </path>
+                                                        <path id="arrow-path"
+                                                            d="M15.355,10.6l-3,3a.5.5,0,0,1-.35.15.508.508,0,0,1-.36-.15l-3-3a.5.5,0,0,1,.71-.71l2.14,2.14V3.555a.508.508,0,0,1,.5-.5.5.5,0,0,1,.5.5v8.49l2.15-2.16a.5.5,0,0,1,.71.71Z">
+                                                        </path>
+                                                    </g>
+                                                </g>
+                                            </g>
+                                        </svg>
+                                        
+                                    </button>
+                                </div>
+                            </div>
+
+                            <p class="text-[12px] text-slate-500 mt-2 italic">
+                                Sua chave é usada para buscar capas automaticamente.
+                            </p>
+                        </div>
+
+
+                    </div>
+
+                    <div id="content-updates" class="hidden space-y-4 text-center py-4">
+                        <div class="flex flex-col items-center gap-3">
+                            <div id="update-icon">
+                                <i>
+                                    <svg fill="#3b82f6" width="32px" height="32px" viewBox="0 0 30 30"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round">
+                                        </g>
+                                        <g id="SVGRepo_iconCarrier">
+                                            <path
+                                                style="text-indent:0;text-align:start;line-height:normal;text-transform:none;-inkscape-font-specification:Sans"
+                                                d="M29.126 12.16l-3.644 3.64-3.612-3.64c-.45-.464-1.2.234-.71.71l3.967 3.993c.186.186.525.186.71 0l4-3.994c.49-.488-.238-1.18-.71-.71zM15.53 4.012c-4.307-.187-8.5 2.164-10.467 6.28-.288.6.59 1 .875.44 2.39-5 8.41-7.13 13.437-4.75 3.038 1.437 5.14 4.282 5.625 7.592.095.693 1.102.46 1-.156-.534-3.642-2.88-6.765-6.22-8.345-1.377-.652-2.813-1-4.25-1.062zM.875 17.843l3.644-3.64 3.612 3.64c.45.464 1.2-.234.71-.71L4.873 13.14c-.186-.186-.525-.186-.71 0l-4 3.993c-.49.488.238 1.18.71.71zM14.47 25.99c4.307.187 8.5-2.165 10.468-6.28.287-.6-.592-1-.875-.44-2.39 5-8.41 7.13-13.438 4.75C7.587 22.584 5.485 19.74 5 16.428c-.095-.693-1.102-.458-1 .156.534 3.642 2.88 6.764 6.22 8.344 1.377.653 2.813 1 4.25 1.063z">
+                                            </path>
+                                        </g>
+                                    </svg>
+                                </i>
+                            </div>
+                            <p class="text-sm text-slate-300">Versão atual: <span id="app-version-display"
+                                    class="font-mono text-blue-400">1.0.0</span></p>
+
+                            <button onclick="window.checkUpdatesManual()" id="btn-check-updates"
+                                class="w-full bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/50 py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2">
+                                <span>Procurar Atualizações</span>
+                            </button>
+
+                            <p id="update-status-text" class="text-[12px] text-slate-500">Última verificação: hoje
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="content-about" class="hidden py-4 animate-fade-in">
+                        <div class=" space-y-6 text-left">
+
+                            <div class="text-center pb-4 border-b border-slate-700/50">
+                                <div class="flex flex-col items-center">
+                                    <h2 class="text-2xl font-bold text-white tracking-tight">Hunter <span
+                                            class="text-blue-500">Launcher</span></h2>
+
+                                    <model-viewer id="hunter-logo-3d" src="icon/hunter-3D-icon.gltf"
+                                        alt="Hunter Launcher" auto-rotate camera-controls disable-zoom
+                                        interaction-prompt="none" rotation-per-second="120deg"
+                                        style="width: 64px; height: 64px; background-color: transparent; outline: none; border: none; overflow: hidden; display: block; box-shadow: none;">
+                                    </model-viewer>
+
+
+
+
+                                </div>
+
+                                <p class="text-slate-500 text-xs mt-1 uppercase tracking-widest">Versão 1.0.0</p>
+                            </div>
+
+                            <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/50">
+                                <p class="text-slate-300 leading-relaxed text-sm">
+                                    O <span class="text-blue-400 font-medium">Hunter Launcher</span> é um projeto open
+                                    source desenvolvido para centralizar sua biblioteca de jogos em uma interface única,
+                                    rápida e personalizável.
+                                </p>
+                            </div>
+
+                            <div class="space-y-3">
+                                <h3 class="text-xs font-semibold text-slate-500 uppercase px-1">Recursos e Links</h3>
+
+                                <a href="javascript:void(0)"
+                                    onclick="window.pywebview.api.open_external_link('https://github.com/CaioMonteir0/Hunter-Launcher')"
+                                    class="flex items-center p-3 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700 rounded-lg transition-all group">
+                                    <div
+                                        class="w-8 h-8 flex items-center justify-center bg-slate-900 rounded-md mr-3 transition-colors">
+                                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                            <path
+                                                d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.041-1.412-4.041-1.412-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium text-white">Repositório GitHub</p>
+                                        <p class="text-xs text-slate-500">Conheça o projeto</p>
+                                    </div>
+                                    <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </a>
+                                <a href="javascript:void(0)"
+                                    onclick="window.pywebview.api.open_external_link('https://www.steamgriddb.com/')"
+                                    class="flex items-center p-3 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700 rounded-lg transition-all group">
+                                    <div
+                                        class="w-8 h-8 flex items-center justify-center bg-slate-900 rounded-md mr-3 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" version="1" viewBox="0 0 50 24">
+                                            <path fill="#305b79" d="M0 0h41v18H0V0z" />
+                                            <path fill="#4787b4" d="M3 2h41v18H3V2z" />
+                                            <path fill="#5fb4f0" d="M6 4h41v18H6V4z" />
+                                            <path fill="#3a6e92" d="M9 6h41v18H9V6z" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium text-white">Powered by SteamGridDB</p>
+                                        <p class="text-xs text-slate-500">Imagens e artes fornecidas via API</p>
+                                    </div>
+                                    <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </a>
+
+
+
+                            </div>
+                        </div>
+                    </div>
+
+                    
                 </div>
             </div>
+
+
         </div>
 
-        <div id="notification-container" class="fixed bottom-5 right-5 z-[200] flex flex-col gap-3"></div>
-
-        <div id="confirm-modal"
-            class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-            <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl w-full max-w-md shadow-2xl scale-in">
-                <div class="flex items-center gap-3 mb-4">
-                    <span id="confirm-icon" class="text-2xl">⚠️</span>
-                    <h2 id="confirm-title" class="text-xl font-bold text-white">Confirmação</h2>
-                </div>
-
-                <p id="confirm-message" class="text-slate-300 mb-8 leading-relaxed">
-                    Tem certeza que deseja realizar esta ação?
-                </p>
-
-                <input type="text" id="confirm-input"
-                    class="hidden w-full bg-slate-700 border border-slate-600 rounded-lg p-2 mb-6 text-white outline-none focus:border-blue-500">
-
-                <div class="flex gap-3">
-                    <button onclick="window.closeConfirmModal()"
-                        class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg font-bold transition-all text-white">
-                        Cancelar
-                    </button>
-
-                    <button id="confirm-button-execute"
-                        class="flex-1 bg-red-600 hover:bg-red-500 py-3 rounded-lg font-bold transition-all transform active:scale-95 text-white">
-                        Confirmar
-                    </button>
-                </div>
-            </div>
-        </div>
 
     </div>
+
+
+
+    <div id="notification-container" class="fixed bottom-5 right-5 z-[9999] flex flex-col gap-3"></div>
+
+
+    <div id="confirm-modal"
+        class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl w-full max-w-md shadow-2xl scale-in">
+            <div class="flex items-center gap-3 mb-4">
+                <span id="confirm-icon" class="text-2xl">⚠️</span>
+                <h2 id="confirm-title" class="text-xl font-bold text-white">Confirmação</h2>
+            </div>
+
+            <p id="confirm-message" class="text-slate-300 mb-8 leading-relaxed">
+                Tem certeza que deseja realizar esta ação?
+            </p>
+
+            <input type="text" id="confirm-input"
+                class="hidden w-full bg-slate-700 border border-slate-600 rounded-lg p-2 mb-6 text-white outline-none focus:border-blue-500">
+
+            <div class="flex gap-3">
+                <button onclick="window.closeConfirmModal()"
+                    class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg font-bold transition-all text-white">
+                    Cancelar
+                </button>
+
+                <button id="confirm-button-execute"
+                    class="flex-1 bg-red-600 hover:bg-red-500 py-3 rounded-lg font-bold transition-all transform active:scale-95 text-white">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
 
     <script src="script.js"></script>
 </body>

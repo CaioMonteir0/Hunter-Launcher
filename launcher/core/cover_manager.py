@@ -1,3 +1,22 @@
+# Hunter-Launcher
+# Copyright (C) 2026 Caio Monteiro
+#
+# Este programa é um software livre: você pode redistribuí-lo e/ou modificá-lo 
+# sob os termos da Licença Pública Geral GNU (GPL), conforme publicada pela 
+# Free Software Foundation, versão 3 da licença, ou (a seu critério) qualquer 
+# versão posterior.
+#
+# Este programa é distribuído na esperança de que seja útil, mas SEM QUALQUER 
+# GARANTIA; sem mesmo a garantia implícita de COMERCIALIZAÇÃO ou ADEQUAÇÃO A 
+# UM PROPÓSITO ESPECÍFICO. Veja a Licença Pública Geral GNU para mais detalhes.
+#
+# Você deve ter recebido uma cópia da Licença Pública Geral GNU junto com 
+# este programa. Se não, veja: https://www.gnu.org/licenses/
+#
+# Projeto disponível em: https://github.com/CaioMonteir0/Hunter-Launcher
+
+
+
 import os
 import webview
 
@@ -45,6 +64,7 @@ class CoverManager:
 
     def update_game_cover(self, game_name, new_path):
         """Atualiza o banco e gerencia a limpeza do arquivo anterior."""
+        print(f"Atualizando capa de '{game_name}' para '{new_path}'")
         games = self._load_db()
         for g in games:
             if g['name'] == game_name:
@@ -55,3 +75,5 @@ class CoverManager:
                 g['cover'] = new_path
                 break
         self._save_db(games)
+        
+        

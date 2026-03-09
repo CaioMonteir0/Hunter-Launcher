@@ -1,6 +1,35 @@
+# Hunter-Launcher
+# Copyright (C) 2026 Caio Monteiro
+#
+# Este programa é um software livre: você pode redistribuí-lo e/ou modificá-lo 
+# sob os termos da Licença Pública Geral GNU (GPL), conforme publicada pela 
+# Free Software Foundation, versão 3 da licença, ou (a seu critério) qualquer 
+# versão posterior.
+#
+# Este programa é distribuído na esperança de que seja útil, mas SEM QUALQUER 
+# GARANTIA; sem mesmo a garantia implícita de COMERCIALIZAÇÃO ou ADEQUAÇÃO A 
+# UM PROPÓSITO ESPECÍFICO. Veja a Licença Pública Geral GNU para mais detalhes.
+#
+# Você deve ter recebido uma cópia da Licença Pública Geral GNU junto com 
+# este programa. Se não, veja: https://www.gnu.org/licenses/
+#
+# Projeto disponível em: https://github.com/CaioMonteir0/Hunter-Launcher
+
+
+
+
 import os
 import ctypes
 import subprocess
+from ctypes import wintypes
+
+def get_work_area():
+    
+    user32 = ctypes.windll.user32
+    rect = wintypes.RECT()
+    
+    user32.SystemParametersInfoW(48, 0, ctypes.byref(rect), 0)
+    return rect.right - rect.left, rect.bottom - rect.top
 
 class LauncherLogic:
     def __init__(self):
@@ -25,9 +54,22 @@ class LauncherLogic:
         os._exit(0)
 
     def toggle_maximize(self):
-        if self._window:
+        if not self._window: return
+        
+        
+        sw, sh = get_work_area()
+        
+        if self._window.width >= sw and self._window.height >= sh:
             
-            self._window.toggle_fullscreen()
+            self._window.resize(1200, 800)
+           
+            cx = int((ctypes.windll.user32.GetSystemMetrics(0) - 1200) / 2)
+            cy = int((ctypes.windll.user32.GetSystemMetrics(1) - 800) / 2)
+            self._window.move(cx, cy)
+        else:
+            # Maximiza respeitando a barra de tarefas
+            self._window.move(0, 0)
+            self._window.resize(sw, sh)
             
     def get_folder_size(self, file_path):
         folder = os.path.dirname(file_path)

@@ -3,15 +3,20 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="copyright" content="Caio Monteiro">
+    <meta name="license" content="GPL-3.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
             background: #0f172a;
             color: white;
             overflow-x: hidden;
-            
+
             scrollbar-width: thin;
             scrollbar-color: #334155 #0f172a;
+
+            margin: 0;
+            padding: 0;
         }
 
         body::-webkit-scrollbar {
@@ -48,91 +53,323 @@
                 opacity: .5;
             }
         }
+
+        .title-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 40px;
+            background: transparent;
+            position: absolute;
+            top: 0;
+            right: 0;
+            margin-bottom: 16px;
+            width: 100%;
+            z-index: 9999;
+        }
+
+        .drag-region {
+
+            z-index: 10;
+        }
+
+        .window-controls {
+
+            z-index: 20;
+        }
+
+        .control-btn {
+
+            -webkit-app-region: no-drag;
+            background: transparent;
+            transition: background-color 0.2s;
+        }
+
+
+        #search-window-title {
+            user-select: none;
+            -webkit-user-select: none;
+            padding-top: 10px;
+        }
+
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.9);
+            border-top: 1px solid #1e293b;
+            position: sticky;
+            bottom: 0;
+        }
+
+        .btn-pag {
+            background: #1e293b;
+            color: #94a3b8;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            min-width: 120px;
+        }
+
+        .btn-pag:not(:disabled):hover {
+            background: #334155;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .btn-pag:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        
+        .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background: #3b82f6;
+            width: 0%;
+        }
+
+        .animate-progress {
+            animation: fillProgress 5s linear forwards;
+        }
+
+        @keyframes fillProgress {
+            from {
+                width: 0%;
+            }
+
+            to {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 
-<body class="p-4">
-    <div class="sticky top-0 bg-[#0f172a] pb-4 z-10">
-        <div class="flex gap-2">
-            <input id="search-input" type="text"
-                class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                placeholder="Nome do jogo..." onkeyup="if(event.key === 'Enter') search()">
-            <button onclick="search()"
-                class="bg-blue-600 px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-500 transition-all active:scale-95">
-                Buscar
+<body>
+
+    <div class="top-content">
+
+        <div class="title-bar relative w-full h-10 flex items-center bg-transparent">
+            <div class="drag-region pywebview-drag-region absolute inset-0 w-full h-full"></div>
+
+            <h5 id="search-window-title" class="font-bold ml-4 text-sm text-white truncate z-0 opacity-80 select-none">
+            </h5>
+
+            <div class="window-controls absolute top-0 right-0 flex h-full z-50">
+                <button id="close-btn" title="Fechar" onclick="closeSearchWindow()"
+                    class="control-btn hover:bg-red-600 overflow-hidden px-4 h-full flex items-center justify-center">
+                    <svg width="12" height="12" viewBox="0 0 12 12">
+                        <path d="M2 2l8 8m0-8l-8 8" fill="none" stroke="currentColor" stroke-width="1.2"
+                            stroke-linecap="round" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="pr-4 pl-4">
+
+
+            <div class="sticky top-0 bg-[#0f172a] pb-4 z-10">
+                <div class="flex gap-2">
+                    <input id="search-input" type="text"
+                        class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                        placeholder="Procure capas incríveis no SteamGridDB"
+                        onkeyup="if(event.key === 'Enter') search()">
+                    <button onclick="search()"
+                        class="bg-blue-600 px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-500 transition-all active:scale-95">
+                        Buscar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+
+    <div class="pr-4 pl-4 pt-4">
+
+
+        <div id="results" class="grid grid-cols-2 gap-4">
+            <div class="col-span-2 py-20 text-center">
+                <p class="text-slate-500 text-sm">Digite o nome do jogo para buscar capas no SteamGridDB</p>
+            </div>
+        </div>
+
+        <div id="pagination" class="pagination-container hidden mb-6">
+            <button id="prev-btn" onclick="changePage(-1)" class="btn-pag">
+                Anterior
+            </button>
+
+            <span id="page-info" class="text-sm font-mono text-slate-400">Página 1</span>
+
+            <button id="next-btn" onclick="changePage(1)" class="btn-pag">
+                Próximo
+                <div id="next-progress" class="progress-bar"></div>
             </button>
         </div>
+
     </div>
 
-    <div id="results" class="grid grid-cols-2 gap-4">
-        <div class="col-span-2 py-20 text-center">
-            <p class="text-slate-500 text-sm">Digite o nome do jogo para buscar capas no SteamGridDB</p>
-        </div>
-    </div>
 
     <script>
-        // Foca o input automaticamente ao abrir a janela
+        // Variáveis de Estado Globais
+        let currentPage = 0;
+        let currentQuery = "";
+        let pageCache = {}; // Cache: { 0: {images: [], has_next: true}, 1: ... }
+        let isTimerActive = false;
+
+
         window.onload = () => document.getElementById('search-input').focus();
+
 
         async function search() {
             const input = document.getElementById('search-input');
             const query = input.value.trim();
+
             if (!query) return;
 
+            // Se a busca for nova, resetamos o cache e a página
+            if (query !== currentQuery) {
+                currentQuery = query;
+                currentPage = 0;
+                pageCache = {};
+            }
+
+            await fetchAndRender();
+        }
+
+
+        // Gerencia a busca (Python ou Cache) e renderiza na tela
+
+        async function fetchAndRender() {
             const resultsDiv = document.getElementById('results');
+            const paginationDiv = document.getElementById('pagination');
+
+            // Limpa resultados atuais e mostra loading
             resultsDiv.innerHTML = `
-                <div class="col-span-2 py-20 text-center loading-pulse">
-                    <p class="text-blue-400 font-medium">Buscando no SteamGridDB...</p>
-                </div>
-            `;
+            <div class="col-span-2 py-20 text-center loading-pulse">
+                <p class="text-blue-400 font-medium">Carregando página ${currentPage + 1}...</p>
+            </div>
+        `;
+            paginationDiv.classList.add('hidden');
 
             try {
-                // Chama a SearchApi no Python
-                const images = await window.pywebview.api.search_steamgrid(query);
+                let data;
 
-                resultsDiv.innerHTML = '';
+                // Verifica se a página já está no Cache
+                if (pageCache[currentPage]) {
+                    data = pageCache[currentPage];
+                    console.log("[Cache] Recuperando página:", currentPage);
+                } else {
 
-                if (!images || images.length === 0) {
-                    resultsDiv.innerHTML = `
-                        <div class="col-span-2 py-20 text-center">
-                            <p class="text-red-400">Nenhuma capa encontrada.</p>
-                            <p class="text-slate-500 text-xs mt-1">Verifique sua API Key nas configurações.</p>
-                        </div>
-                    `;
-                    return;
+                    data = await window.pywebview.api.search_steamgrid(currentQuery, currentPage);
+                    pageCache[currentPage] = data; // Guarda no cache para a próxima vez
                 }
 
-                images.forEach(url => {
-                    console.log("Tentando carregar imagem:", url); 
-                    const img = document.createElement('img');
-                    img.src = url;
-                    img.className = 'grid-item w-full aspect-[2/3] object-cover rounded-lg border-2 border-transparent cursor-pointer transition-all';
 
-                    // Fallback caso a imagem falhe ao carregar
-                    img.onerror = () => { img.src = 'https://via.placeholder.com/600x900?text=Erro+ao+Carregar'; };
+                renderGrid(data.images);
 
-                    img.onclick = () => selectCover(url);
-                    resultsDiv.appendChild(img);
-                });
+                // Atualiza a interface de paginação
+                if (data.images.length > 0) {
+                    updatePaginationUI(data.has_next);
+                    paginationDiv.classList.remove('hidden');
+                } else if (currentPage === 0) {
+                    resultsDiv.innerHTML = `<div class="col-span-2 py-20 text-center text-red-400">Nenhuma capa encontrada.</div>`;
+                }
+
             } catch (err) {
-                resultsDiv.innerHTML = `<p class="col-span-2 text-center text-red-500">Erro na conexão.</p>`;
+                console.error("Erro na busca:", err);
+                resultsDiv.innerHTML = `<p class="col-span-2 text-center text-red-500">Erro na conexão com o Launcher.</p>`;
             }
+        }
+
+
+        function renderGrid(images) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            images.forEach(url => {
+                const img = document.createElement('img');
+                img.src = url;
+                img.className = 'grid-item w-full aspect-[2/3] object-cover rounded-lg border-2 border-transparent cursor-pointer transition-all hover:scale-105';
+
+                img.onerror = () => { img.src = 'https://via.placeholder.com/600x900?text=Erro+ao+Carregar'; };
+                img.onclick = () => selectCover(url);
+
+                resultsDiv.appendChild(img);
+            });
+
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+
+        // Controla os botões, contador de página e o Timer de 5s
+
+        function updatePaginationUI(hasNext) {
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const pageInfo = document.getElementById('page-info');
+            const progressBar = document.getElementById('next-progress');
+
+            pageInfo.innerText = `Página ${currentPage + 1}`;
+
+
+            prevBtn.disabled = (currentPage === 0);
+
+
+            if (hasNext) {
+                nextBtn.disabled = true;
+                isTimerActive = true;
+
+
+                progressBar.classList.remove('animate-progress');
+                void progressBar.offsetWidth;
+                progressBar.classList.add('animate-progress');
+
+                // Libera o botão após 5 segundos
+                setTimeout(() => {
+                    nextBtn.disabled = false;
+                    isTimerActive = false;
+                }, 5000);
+            } else {
+                nextBtn.disabled = true;
+                progressBar.classList.remove('animate-progress');
+            }
+        }
+
+
+        function changePage(delta) {
+
+            if (isTimerActive && delta > 0) return;
+
+            currentPage += delta;
+            fetchAndRender();
         }
 
         async function selectCover(url) {
-            // Desabilita o clique para evitar múltiplos downloads
             document.body.style.pointerEvents = 'none';
-
             const success = await window.pywebview.api.select_online_cover(url);
-
-            if (success) {
-                // Em vez de window.close(), chama um método que fecha a janela via Python
-            } else {
-                // Se falhar, reabilita os cliques
+            if (!success) {
                 document.body.style.pointerEvents = 'all';
             }
         }
+
+        function closeSearchWindow() {
+            window.pywebview.api.close_search_window();
+        }
     </script>
+
 </body>
 
 </html>

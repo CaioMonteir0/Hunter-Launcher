@@ -1,7 +1,30 @@
-import os
+# Hunter-Launcher
+# Copyright (C) 2026 Caio Monteiro
+#
+# Este programa é um software livre: você pode redistribuí-lo e/ou modificá-lo 
+# sob os termos da Licença Pública Geral GNU (GPL), conforme publicada pela 
+# Free Software Foundation, versão 3 da licença, ou (a seu critério) qualquer 
+# versão posterior.
+#
+# Este programa é distribuído na esperança de que seja útil, mas SEM QUALQUER 
+# GARANTIA; sem mesmo a garantia implícita de COMERCIALIZAÇÃO ou ADEQUAÇÃO A 
+# UM PROPÓSITO ESPECÍFICO. Veja a Licença Pública Geral GNU para mais detalhes.
+#
+# Você deve ter recebido uma cópia da Licença Pública Geral GNU junto com 
+# este programa. Se não, veja: https://www.gnu.org/licenses/
+#
+# Projeto disponível em: https://github.com/CaioMonteir0/Hunter-Launcher
+
+
+
+
+
+import os, sys, webbrowser
 import webview
 import threading
 import ctypes, json
+import time
+
 
 # módulos da pasta core
 from core.database import DatabaseManager
@@ -9,6 +32,7 @@ from core.settings import SettingsManager
 from core.launcher_logic import LauncherLogic
 from core.cover_manager import CoverManager
 from core.search_api import SearchApi
+from core.updater import Updater
 
 
 # Função global para pegar a resolução real do Windows
@@ -22,6 +46,7 @@ def center_initial_window(window):
     x = int((sw - 480) / 2)
     y = int((sh - 360) / 2)
     window.move(x, y)
+    
 
 webview.settings['DRAG_REGION_DIRECT_TARGET_ONLY'] = True
 
@@ -29,15 +54,25 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
 
     def __init__(self):
     
-        # 1. Inicializa o Database primeiro para garantir que self.app_data_path exista
+        # Inicializa o Database primeiro para garantir que self.app_data_path exista
         DatabaseManager.__init__(self)
-        # 2. Inicializa os outros módulos
+        # Inicializa os outros módulos
         SettingsManager.__init__(self, self.app_data_path)
         LauncherLogic.__init__(self)
         CoverManager.__init__(self)
         self.all_windows = []
         
+        self.updater = Updater(self)
+        self.current_version = "1.0.0"
+        self.pending_update_url = None
         self._window = None
+        
+    def open_external_link(self, url):
+        """Abre uma URL no navegador padrão do sistema."""
+        try:
+            webbrowser.open(url)
+        except Exception as e:
+            print(f"Erro ao abrir link: {e}")
 
     def set_window(self, window):
         self._window = window
@@ -51,17 +86,21 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
 
     # --- MÉTODOS DE PONTE (JS -> PYTHON) ---
     
+    def get_app_version(self):
+        return self.current_version
     
-    def notify(self, message, level="error"):
+    
+    def notify(self, message, level="error", sound=None):
         print(f"[UI] {level.upper()}: {message}")
 
         if self._window:
             safe_message = json.dumps(message)
             self._window.evaluate_js(
-                f"window.showNotification({safe_message}, '{level}')"
+                f"window.showNotification({safe_message}, '{level}', '{sound}')"
             )
 
     def get_library(self):
+        print("Obtendo biblioteca...")
         games = self._load_db()
         display_list = []
         for g in games:
@@ -193,9 +232,9 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
                 searcher = SearchApi(self, g['name'])
                 results = searcher.search_steamgrid(g['name'])
                 
-                if results:
+                if results and results.get('images'):
                     # Baixa a nova capa
-                    local_path = searcher.download_and_save_cover(results[0])
+                    local_path = searcher.download_and_save_cover(results.get('images', [])[0])
                     
                     if local_path:
                         # Se já havia um caminho de arquivo que sumiu, limpa por segurança
@@ -216,20 +255,40 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
             self._save_db(games)
             
 
-    def open_search_window(self, game_name):
+    def open_search_window(self, game_name, game_title_or_alias):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         search_html = os.path.join(current_dir, 'gui', 'search.html')
         search_api = SearchApi(self, game_name)
+        
         search_win = webview.create_window(
             f'Buscar Capa: {game_name}', 
             search_html,
             js_api=search_api,
             width=500,
             height=600,
-            resizable=False
+            resizable=False,
+            frameless=True,
+            easy_drag=True
         )
+      
+        def on_loaded():
+            
+            safe_title = game_title_or_alias.replace("'", "\\'")
+            js_code = f"document.getElementById('search-window-title').innerText = '{safe_title}';"
+            search_win.evaluate_js(js_code)
+        search_win.events.loaded += on_loaded
         
         self.add_window(search_win)
+        
+    def close_search_window(self, game_name):
+        
+        for win in list(webview.windows): 
+            if f"Buscar Capa: {game_name}" in win.title:
+                try:
+                    win.destroy()
+                    break # Para após fechar a janela correta
+                except Exception as e:
+                    print(f"Erro ao fechar: {e}")
         
     
     def center_initial_window(window):
@@ -238,6 +297,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         x = int((sw - 480) / 2)
         y = int((sh - 360) / 2)
         window.move(x, y)
+       
         
     def finish_intro(self):
         """
@@ -282,15 +342,70 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
                 if self._window:
                     self._window.load_url(launcher_url)
                     print("Navegação para o Launcher concluída.")
+                    
+                    #threading.Thread(target=self.check_updates_on_start, daemon=True).start()
 
             # Dispara a navegação em background para não travar o callback do JS
             threading.Thread(target=navigate, daemon=True).start()
             
-            
+            # Apaga o arquivo temporário de script de atualização caso exista
+            self.destroy_updater_script()
             return True
         except Exception as e:
             print(f"Erro ao iniciar transição: {e}")
             return False
+        
+    def check_updates_on_start(self):
+        """Executa a verificação e notifica o usuário na interface principal."""
+        
+        time.sleep(2) 
+        
+        print("[UPDATER] Verificando se há novas versões no GitHub...")
+        version = self.updater.check_latest_version()
+        
+        if version.replace("v", "") != self.current_version.replace("v", ""):
+            self.notify(f"Nova versão {version} disponível! Clique em Configurações para atualizar.", "info", "update")
+            return {"available": True, "version": version}
+        
+            
+    def check_manual_update(self):
+        
+        print("[UPDATER] Verificando manualmente por atualizações...")
+        version = self.updater.check_latest_version()
+        
+        if version.replace("v", "") != self.current_version.replace("v", ""):
+            self.notify(f"Nova versão {version} disponível! Clique em Configurações para atualizar.", "info", "update")
+            return {"available": True, "version": version}
+        else:
+            self.notify("O Launcher está na versão mais recente!", "success")
+            return {"available": False, "version": self.current_version}
+            
+        
+    def start_launcher_update(self):
+        """Chamado pelo botão 'Instalar' após encontrar um update"""
+        
+        version, url = self.updater.get_download_url()
+        
+        if version and url:
+            self.pending_update_url = url
+        
+        if hasattr(self, 'pending_update_url') and self.pending_update_url:
+           
+            if "python.exe" in sys.executable.lower():
+                self.notify("Rode a versão compilada para testar a atualização real.", "warning")
+                return
+            self.updater.run_update(self.pending_update_url)
+            
+    def destroy_updater_script(self):
+        """Limpa o script de atualização do AppData após o processo (chamado pelo PowerShell)"""
+        ps_script_path = os.path.join(self.app_data_path, "update_script.ps1")
+        if os.path.exists(ps_script_path):
+            try:
+                os.remove(ps_script_path)
+                print("Script de atualização removido.")
+            except Exception as e:
+                print(f"Erro ao remover script: {e}")
+               
 
 if __name__ == '__main__':
     current_dir = os.path.dirname(os.path.abspath(__file__))
