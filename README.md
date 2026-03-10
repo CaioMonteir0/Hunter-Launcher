@@ -1,10 +1,13 @@
 # 🎮 Hunter Launcher
 
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)
-![Python](https://img.shields.io/badge/Python-3.10+-yellow.svg)
+![Python](https://img.shields.io/badge/Python-3.13.2-yellow.svg)
 ![Framework](https://img.shields.io/badge/UI-pywebview%20%2B%20Tailwind-informational.svg)
 
 **Hunter Launcher** é um launcher de jogos moderno e leve, focado na estética e na facilidade de organizar sua biblioteca de jogos. Desenvolvido com Python e tecnologias web, ele oferece uma interface fluida e integração com API do <a href="https://www.steamgriddb.com/" target="_blank" rel="noopener noreferrer">SteamGridDB</a> para a busca de capas.
+
+#### 🫡 Caso tenha interesse em conhecer o projeto do SteamGridDB:
+- #### GitHub: <a href="https://github.com/SteamGridDB" target="_blank" rel="noopener noreferrer">SteamGridDB</a> ####
 
 
 ![alt text](image.png)
@@ -14,6 +17,8 @@
 - Acesse: [Hunter Launcher](https://github.com/CaioMonteir0/Hunter-Launcher/releases)
 
 - Realize o download do .exe da versão mais atual.
+
+> ⚠️ **Aviso:** O Windows pode reconhecer o Hunter Launcher como um programa estranho devido ao .exe não ter assinatura (*causando erro de Fonte Desconhecida*). Futuramente será providenciada.
 
 
 ## Criando sua conta no <a href="https://www.steamgriddb.com/" target="_blank" rel="noopener noreferrer">SteamGridDB</a>
@@ -67,7 +72,7 @@ Dentro desta pasta, você encontrará:
 ### Pré-requisitos
 **Certifique-se de ter:**
 
-**Python 3.10** ou superior instalado.
+**Python 3.13.2:** https://www.python.org/downloads/release/python-3132/
  
 **pip**: O gerenciador de pacotes do Python. Ele é essencial para baixar as bibliotecas necessárias que permitem ao Launcher comunicar com APIs e gerenciar imagens.
 1. **Clone o repositório:**
@@ -84,8 +89,7 @@ Dentro desta pasta, você encontrará:
    python main.py
 
 
-### 🫡 Caso tenha interesse em conhecer o projeto do SteamGridDB:
-**GitHub: <a href="https://github.com/SteamGridDB" target="_blank" rel="noopener noreferrer">SteamGridDB</a>**
+
 ---
 ### 💼 Projeto desenvolvido por
 

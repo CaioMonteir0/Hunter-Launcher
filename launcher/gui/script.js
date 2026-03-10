@@ -361,8 +361,8 @@ window.saveApiSettings = async function () {
 window.showNotification = function (message, type = "info", soundName = null) {
   const container = document.getElementById("notification-container");
   const toast = document.createElement("div");
-  
-
+  soundName = null;
+  /* Por enquanto não haverá suporte a audio, nas próximas atualizações será usado
   if (soundName) {
     const audioFiles = {
       update: "sound/updater-sound.mp3"
@@ -375,7 +375,7 @@ window.showNotification = function (message, type = "info", soundName = null) {
       audio.play().catch((e) => console.error("Erro ao tocar áudio:", e));
     }
   }
-
+*/
   const colors = {
     success: "border-green-500 text-green-400",
     error: "border-red-500 text-red-400",
