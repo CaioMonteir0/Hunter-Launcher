@@ -150,6 +150,10 @@ body {
     #card-info{
         padding-right: 1rem;
     }
+
+    #card-actions {
+        transform: translateX(30%);
+    }
 }
 
 .game-card.list-mode:hover {

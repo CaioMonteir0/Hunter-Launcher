@@ -235,7 +235,7 @@ function addGameToUI(game) {
                 <h3 title="${displayName}" class="font-bold text-sm leading-tight truncate">${displayName}</h3>
             </div>
 
-                <div class="flex gap-24 items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300" >
+                <div id="card-actions" class="flex gap-24 items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300" >
     <button title="Jogar" onclick="handleAction('PLAY', '${game.path.replace(/\\/g, "/")}', '${displayName}')" 
             class="text-slate-400 hover:text-blue-500 transition-colors duration-200 outline-none">
         <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
