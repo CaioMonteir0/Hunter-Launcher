@@ -63,7 +63,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         self.all_windows = []
         self.is_fixing_covers = False
         self.updater = Updater(self)
-        self.current_version = "1.0.0"
+        self.current_version = "1.0.1"
         self.pending_update_url = None
         self._window = None
         
@@ -119,12 +119,18 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         result = self._window.create_file_dialog(
             webview.FileDialog.OPEN, 
             allow_multiple=False, 
-            file_types=('Executáveis (*.exe)',)
+            file_types=('Executáveis (*.exe;*.lnk)',)
         )
         
         if not result: return None
 
-        file_path = result[0].replace('\\', '/')
+        raw_path = result[0]
+        file_path = self._resolve_shortcut(raw_path).replace('\\', '/')
+        
+        if not file_path or not os.path.exists(file_path):
+            self._window.evaluate_js("window.showNotification('Erro: Caminho inválido ou destino não encontrado', 'error')")
+            return None
+        
         game_name = os.path.basename(os.path.dirname(file_path))
         
         new_game = {
@@ -372,11 +378,16 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         print("[UPDATER] Verificando se há novas versões no GitHub...")
         version = self.updater.check_latest_version()
         
+        #remover v e pontos
+        versionClean = version.replace("v", "").replace(".", "")
+        currentVersionClean = self.current_version.replace("v", "").replace(".", "")
+        print(f"Versão atual: {self.current_version} | versão encontrada GitHub: {version}")
+        
         if not version or version.lower() == "releases" or version == "null":
             print("[UPDATER] Nenhuma versão válida encontrada.")
             return {"available": False}
         
-        if version.replace("v", "") != self.current_version.replace("v", ""):
+        if versionClean > currentVersionClean:
             self.notify(f"Nova versão {version} disponível! Clique em Configurações para atualizar.", "info", "update")
             return {"available": True, "version": version}
         
@@ -385,13 +396,16 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         
         print("[UPDATER] Verificando manualmente por atualizações...")
         version = self.updater.check_latest_version()
-        
+        #remover v e pontos
+        versionClean = version.replace("v", "").replace(".", "")
+        currentVersionClean = self.current_version.replace("v", "").replace(".", "")
+        print(f"Versão atual: {self.current_version} | versão encontrada GitHub: {version}")
         if not version or version.lower() == "releases" or version == "null":
             print("[UPDATER] Nenhuma versão válida encontrada.")
             self.notify("Nenhuma atualização encontrada!", "info")
             return {"available": False}
         else:
-            if version.replace("v", "") != self.current_version.replace("v", ""):
+            if versionClean > currentVersionClean:
                 self.notify(f"Nova versão {version} disponível! Clique em Configurações para atualizar.", "info", "update")
                 return {"available": True, "version": version}
             else:

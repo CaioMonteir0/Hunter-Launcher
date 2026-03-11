@@ -22,6 +22,7 @@ import os
 import ctypes
 import subprocess
 from ctypes import wintypes
+import win32com.client
 
 def get_work_area():
     
@@ -91,3 +92,15 @@ class LauncherLogic:
         except Exception as e:
             print(f"Erro ao lançar: {e}")
             return False
+        
+    def _resolve_shortcut(self, path):
+        
+        if path.lower().endswith('.lnk'):
+            try:
+                shell = win32com.client.Dispatch("WScript.Shell")
+                shortcut = shell.CreateShortcut(path)
+                return shortcut.TargetPath
+            except Exception as e:
+                print(f"Erro ao resolver atalho: {e}")
+                return path
+        return path
