@@ -50,6 +50,18 @@ def center_initial_window(window):
 
 webview.settings['DRAG_REGION_DIRECT_TARGET_ONLY'] = True
 
+def resource_path(*parts):
+    """
+    Resolve arquivos do projeto tanto em desenvolvimento quanto no .exe onefile.
+    No PyInstaller, os dados adicionados via --add-data ficam em sys._MEIPASS.
+    """
+    if getattr(sys, "frozen", False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+
+    return os.path.join(base_path, *parts)
+
 class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
 
     def __init__(self):
@@ -63,7 +75,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         self.all_windows = []
         self.is_fixing_covers = False
         self.updater = Updater(self)
-        self.current_version = "1.0.1"
+        self.current_version = "1.1.0"
         self.pending_update_url = None
         self._window = None
         
@@ -455,8 +467,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
 
 
     def open_search_window(self, game_name, game_title_or_alias=None, asset_type="cover"):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        search_html = os.path.join(current_dir, 'gui', 'search.html')
+        search_html = resource_path('gui', 'search.html')
         search_api = SearchApi(self, game_name, asset_type)
         asset_label = "Banner" if asset_type == "banner" else "Capa"
         
@@ -538,8 +549,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
                     self._window.move(curr_x, curr_y)
                     #time.sleep(delay)
                 
-                current_dir = os.path.dirname(os.path.abspath(__file__))
-                launcher_path = os.path.join(current_dir, 'gui', 'index.html')
+                launcher_path = resource_path('gui', 'index.html')
                 
                 # Converte para URL absoluta
                 launcher_url = f'file:///{launcher_path.replace("\\", "/")}'
@@ -630,13 +640,12 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
                
 
 if __name__ == '__main__':
-    current_dir = os.path.dirname(os.path.abspath(__file__))
     api = Api()
     
     
     window = webview.create_window(
         'Hunter Launcher', 
-        os.path.join(current_dir, 'gui', 'splash.html'), 
+        resource_path('gui', 'splash.html'), 
         js_api=api,
         width=480,
         height=360,
