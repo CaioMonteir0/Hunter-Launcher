@@ -9,12 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Enviar mensagem personalizada
-        uses: chf007/action-discord-notificator@v1
+        uses: tsickert/discord-webhook@v5.3.0
         with:
-          webhook_url: ${{ secrets.DISCORD_WEBHOOK }}
-          message: "📢 **Nova Release do Hunter Launcher Disponível!** @everyone \nConfiram as novidades que acabaram de sair direto do forno!"
-          embed_title: "🚀 ${{ github.event.release.name }} (${{ github.event.release.tag_name }})"
-          embed_description: ${{ github.event.release.body }}
-          embed_url: ${{ github.event.release.html_url }}
-          embed_color: "3447003" 
-          embed_author_name: "Hunter Launcher Updates"
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          content: "📢 **Nova Release do Hunter Launcher Disponível!** @everyone \nConfiram as novidades que acabaram de sair direto do forno!"
+          embed-title: "🚀 ${{ github.event.release.name }} (${{ github.event.release.tag_name }})"
+          embed-description: ${{ github.event.release.body }}
+          embed-url: ${{ github.event.release.html_url }}
+          embed-color: "3447003" 
+          embed-author-name: "Hunter Launcher Updates"
