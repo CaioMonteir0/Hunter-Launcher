@@ -227,6 +227,7 @@
         let currentQuery = "";
         let pageCache = {}; // Cache: { 0: {images: [], has_next: true}, 1: ... }
         let isTimerActive = false;
+        let searchAssetType = window.searchAssetType || "cover";
 
 
         window.onload = () => document.getElementById('search-input').focus();
@@ -272,7 +273,9 @@
                     console.log("[Cache] Recuperando página:", currentPage);
                 } else {
 
-                    data = await window.pywebview.api.search_steamgrid(currentQuery, currentPage);
+                    data = searchAssetType === "banner"
+                        ? await window.pywebview.api.search_steamgrid_banners(currentQuery, currentPage)
+                        : await window.pywebview.api.search_steamgrid(currentQuery, currentPage);
                     pageCache[currentPage] = data; // Guarda no cache para a próxima vez
                 }
 
@@ -284,7 +287,8 @@
                     updatePaginationUI(data.has_next);
                     paginationDiv.classList.remove('hidden');
                 } else if (currentPage === 0) {
-                    resultsDiv.innerHTML = `<div class="col-span-2 py-20 text-center text-red-400">Nenhuma capa encontrada.</div>`;
+                    const label = searchAssetType === "banner" ? "banner" : "capa";
+                    resultsDiv.innerHTML = `<div class="col-span-2 py-20 text-center text-red-400">Nenhuma ${label} encontrada.</div>`;
                 }
 
             } catch (err) {
@@ -301,9 +305,11 @@
             images.forEach(url => {
                 const img = document.createElement('img');
                 img.src = url;
-                img.className = 'grid-item w-full aspect-[2/3] object-cover rounded-lg border-2 border-transparent cursor-pointer transition-all hover:scale-105';
+                img.className = searchAssetType === "banner"
+                    ? 'grid-item w-full aspect-[16/9] object-cover rounded-lg border-2 border-transparent cursor-pointer transition-all hover:scale-105'
+                    : 'grid-item w-full aspect-[2/3] object-cover rounded-lg border-2 border-transparent cursor-pointer transition-all hover:scale-105';
 
-                img.onerror = () => { img.src = 'https://via.placeholder.com/600x900?text=Erro+ao+Carregar'; };
+                img.onerror = () => { img.src = searchAssetType === "banner" ? 'https://via.placeholder.com/920x430?text=Erro+ao+Carregar' : 'https://via.placeholder.com/600x900?text=Erro+ao+Carregar'; };
                 img.onclick = () => selectCover(url);
 
                 resultsDiv.appendChild(img);
@@ -359,7 +365,7 @@
 
         async function selectCover(url) {
             document.body.style.pointerEvents = 'none';
-            const success = await window.pywebview.api.select_online_cover(url);
+            const success = await window.pywebview.api.select_online_asset(url);
             if (!success) {
                 document.body.style.pointerEvents = 'all';
             }
@@ -367,6 +373,18 @@
 
         function closeSearchWindow() {
             window.pywebview.api.close_search_window();
+        }
+
+        function configureAssetSearch(assetType) {
+            searchAssetType = assetType || "cover";
+            pageCache = {};
+
+            const input = document.getElementById('search-input');
+            if (!input) return;
+
+            input.placeholder = searchAssetType === "banner"
+                ? "Procure banners no SteamGridDB"
+                : "Procure capas no SteamGridDB";
         }
     </script>
 

@@ -30,10 +30,12 @@ class DatabaseManager:
         self.app_data_path = os.path.join(os.getenv('APPDATA'), 'HunterLauncher')
         self.db_path = os.path.join(self.app_data_path, 'games.json')
         self.covers_dir = os.path.join(self.app_data_path, 'covers')
+        self.banners_dir = os.path.join(self.app_data_path, 'banners')
         self.no_cover_path = os.path.join(self.covers_dir, 'no_cover.png')
         
         Path(self.app_data_path).mkdir(parents=True, exist_ok=True)
         Path(self.covers_dir).mkdir(parents=True, exist_ok=True)
+        Path(self.banners_dir).mkdir(parents=True, exist_ok=True)
         self._ensure_default_cover()
 
     def _ensure_default_cover(self):
@@ -60,12 +62,12 @@ class DatabaseManager:
         with open(self.db_path, 'w', encoding='utf-8') as f:
             json.dump(games, f, indent=4, ensure_ascii=False)
 
-    def _get_image_base64(self, image_path):
+    def _get_image_base64(self, image_path, max_size=(300, 450)):
         try:
             clean_path = image_path.replace('file:///', '').replace('/', os.sep)
             if not os.path.exists(clean_path): clean_path = self.no_cover_path
             with Image.open(clean_path) as img:
-                img.thumbnail((300, 450))
+                img.thumbnail(max_size)
                 buffered = BytesIO()
                 img.save(buffered, format="PNG")
                 return f"data:image/png;base64,{base64.b64encode(buffered.getvalue()).decode()}"

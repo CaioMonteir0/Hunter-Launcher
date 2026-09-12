@@ -26,6 +26,9 @@ let selectedGameForMenu = null;
 
 /** Variáveis de controle para a Biblioteca */
 let rawLibrary = [];
+let currentViewMode = "grid";
+let selectedListGameName = null;
+let currentSettings = {};
 
 /** Variável global para rastrear o filtro atual*/
 let currentSortMode = "az";
@@ -72,6 +75,13 @@ async function handleAction(action, data = null, gameName = null) {
       }
       break;
 
+    case "OPEN_LOCATION":
+      const opened = await window.pywebview.api.open_game_location(data);
+      if (!opened) {
+        window.showNotification("Local do jogo nao encontrado", "warning");
+      }
+      break;
+
     case "CHANGE_COVER_LOCAL":
       const localCover = await window.pywebview.api.change_cover_local(data);
       const gameTitle = maybeAlias !== "" ? maybeAlias : data;
@@ -79,6 +89,18 @@ async function handleAction(action, data = null, gameName = null) {
         refreshGameCover(data, localCover);
         window.showNotification(
           "Capa de " + gameTitle + " atualizada!",
+          "success",
+        );
+      }
+      break;
+
+    case "CHANGE_BANNER_LOCAL":
+      const localBanner = await window.pywebview.api.change_banner_local(data);
+      const bannerGameTitle = maybeAlias !== "" ? maybeAlias : data;
+      if (localBanner) {
+        window.updateGameBanner(data, localBanner);
+        window.showNotification(
+          "Banner de " + bannerGameTitle + " atualizado!",
           "success",
         );
       }
@@ -154,10 +176,32 @@ window.handleCoverChoice = function (type) {
   if (type === "online") {
     const gameTitle = maybeAlias !== "" ? maybeAlias : selectedGameForMenu;
 
-    window.pywebview.api.open_search_window(selectedGameForMenu, gameTitle);
+    window.pywebview.api.open_search_window(selectedGameForMenu, gameTitle, "cover");
   } else {
     window.handleAction("CHANGE_COVER_LOCAL", selectedGameForMenu);
   }
+  document.getElementById("options-menu").classList.add("hidden");
+};
+
+window.handleBannerChoice = function (type) {
+  if (type === "online") {
+    const gameTitle = maybeAlias !== "" ? maybeAlias : selectedGameForMenu;
+
+    window.pywebview.api.open_search_window(selectedGameForMenu, gameTitle, "banner");
+  } else {
+    window.handleAction("CHANGE_BANNER_LOCAL", selectedGameForMenu);
+  }
+  document.getElementById("options-menu").classList.add("hidden");
+};
+
+window.openSelectedGameLocation = function () {
+  const game = rawLibrary.find((g) => g.name === selectedGameForMenu);
+  if (!game) {
+    window.showNotification("Jogo nao encontrado na biblioteca", "error");
+    return;
+  }
+
+  window.handleAction("OPEN_LOCATION", game.path, game.alias || game.name);
   document.getElementById("options-menu").classList.add("hidden");
 };
 
@@ -219,32 +263,39 @@ window.removeGame = function (mode) {
  */
 function addGameToUI(game) {
   const container = document.getElementById("game-library");
-  const isListMode = container.classList.contains("flex-col");
   const displayName =
     game.alias && game.alias.trim() !== "" ? game.alias : game.name;
+  const playArgs = `${toJsArg(game.path.replace(/\\/g, "/"))}, ${toJsArg(displayName)}`;
+  const menuArgs = `${toJsArg(game.name)}, ${toJsArg(game.alias || "")}`;
+  const missingMessage = getMissingGameMessage(game);
+  const missingClass = game.is_missing ? "game-missing" : "";
+  const playHandler = game.is_missing ? "" : `ondblclick='handleAction("PLAY", ${playArgs})'`;
+  const playDisabledClass = game.is_missing ? "opacity-40 cursor-not-allowed" : "hover:text-blue-500";
+  const playButtonAction = game.is_missing ? "" : `onclick='handleAction("PLAY", ${playArgs})'`;
 
   const cardHtml = `
-        <div class="game-card group relative overflow-hidden rounded-xl bg-slate-800/50 border border-slate-700/50 ${isListMode ? "list-mode" : ""}" data-game-name="${game.name}" ondblclick="handleAction('PLAY', '${game.path.replace(/\\/g, "/")}', '${displayName}')">
+        <div class="game-card ${missingClass} group relative overflow-hidden rounded-xl bg-slate-800/50 border border-slate-700/50" data-game-name="${escapeHtml(game.name)}" ${playHandler}>
             <div class="aspect-[2/3] w-full overflow-hidden">
-                <img src="${game.cover}" alt="${displayName}" class="game-card-img h-full w-full object-cover">
+                <img src="${game.cover}" alt="${escapeHtml(displayName)}" class="game-card-img h-full w-full object-cover">
+            </div>
+            ${missingMessage ? `<div class="missing-game-badge">${escapeHtml(missingMessage)}</div>` : ""}
+
+            <div class="card-gradient absolute inset-0 flex flex-col justify-end p-4 transition-all group-hover:pb-6">
+            <div class="card-info flex flex-col mb-2">
+                <span class="game-size-label text-xs font-semibold text-blue-400 uppercase tracking-wider">${escapeHtml(game.size || "Tamanho desconhecido")}</span>
+                <h3 title="${escapeHtml(displayName)}" class="font-bold text-sm leading-tight truncate">${escapeHtml(displayName)}</h3>
             </div>
 
-            <div class="card-gradient absolute inset-0 flex ${isListMode ? "flex-row items-center justify-between" : "flex-col justify-end"} p-4 transition-all ${isListMode ? "" : "group-hover:pb-6"}">
-            <div class="card-info flex flex-col ${isListMode ? "min-w-0" : "mb-2"}">
-                <span class="text-xs font-semibold text-blue-400 uppercase tracking-wider">${game.size}</span>
-                <h3 title="${displayName}" class="font-bold text-sm leading-tight truncate">${displayName}</h3>
-            </div>
-
-                <div id="card-actions" class="flex gap-24 items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300" >
-    <button title="Jogar" onclick="handleAction('PLAY', '${game.path.replace(/\\/g, "/")}', '${displayName}')" 
-            class="text-slate-400 hover:text-blue-500 transition-colors duration-200 outline-none">
+                <div id="card-actions" class="flex w-full justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300" >
+    <button title="Jogar" ${playButtonAction}
+            class="text-slate-400 ${playDisabledClass} transition-colors duration-200 outline-none">
         <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M20.4086 9.35258C22.5305 10.5065 22.5305 13.4935 20.4086 14.6474L7.59662 21.6145C5.53435 22.736 3 21.2763 3 18.9671L3 5.0329C3 2.72368 5.53435 1.26402 7.59661 2.38548L20.4086 9.35258Z" 
                   fill="currentColor"></path>
         </svg>
     </button>
 
-    <button onclick="showOptionsMenu(event, '${game.name}', '${game.alias || ""}')" 
+    <button onclick='showOptionsMenu(event, ${menuArgs})'
             class="text-slate-400 hover:text-white transition-colors duration-200 outline-none ml-4" title="Opções">
         <svg width="16px" height="16px" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
             <path d="M12.15 28.012v-0.85c0.019-0.069 0.050-0.131 0.063-0.2 0.275-1.788 1.762-3.2 3.506-3.319 1.95-0.137 3.6 0.975 4.137 2.787 0.069 0.238 0.119 0.488 0.181 0.731v0.85c-0.019 0.056-0.050 0.106-0.056 0.169-0.269 1.65-1.456 2.906-3.081 3.262-0.125 0.025-0.25 0.063-0.375 0.094h-0.85c-0.056-0.019-0.113-0.050-0.169-0.056-1.625-0.262-2.862-1.419-3.237-3.025-0.037-0.156-0.081-0.3-0.119-0.444zM20.038 3.988l-0 0.85c-0.019 0.069-0.050 0.131-0.056 0.2-0.281 1.8-1.775 3.206-3.538 3.319-1.944 0.125-3.588-1-4.119-2.819-0.069-0.231-0.119-0.469-0.175-0.7v-0.85c0.019-0.056 0.050-0.106 0.063-0.162 0.3-1.625 1.244-2.688 2.819-3.194 0.206-0.069 0.425-0.106 0.637-0.162h0.85c0.056 0.019 0.113 0.050 0.169 0.056 1.631 0.269 2.863 1.419 3.238 3.025 0.038 0.15 0.075 0.294 0.113 0.437zM20.037 15.575v0.85c-0.019 0.069-0.050 0.131-0.063 0.2-0.281 1.794-1.831 3.238-3.581 3.313-1.969 0.087-3.637-1.1-4.106-2.931-0.050-0.194-0.094-0.387-0.137-0.581v-0.85c0.019-0.069 0.050-0.131 0.063-0.2 0.275-1.794 1.831-3.238 3.581-3.319 1.969-0.094 3.637 1.1 4.106 2.931 0.050 0.2 0.094 0.394 0.137 0.588z" 
@@ -261,41 +312,367 @@ function addGameToUI(game) {
 
 function toggleViewMode() {
   const container = document.getElementById("game-library");
-  const cards = document.querySelectorAll(".game-card");
+  currentViewMode = currentViewMode === "grid" ? "list" : "grid";
+  container.classList.add("view-switching");
+  renderFullLibrary(getVisibleLibrary());
 
-  container.classList.toggle("grid-view");
-  container.classList.toggle("list-view");
-
-  cards.forEach((card) => card.classList.toggle("list-mode"));
+  requestAnimationFrame(() => {
+    container.classList.remove("view-switching");
+  });
 }
 
 function refreshGameCover(gameName, newUrl) {
-  const cardImg = document.querySelector(`[data-game-name="${gameName}"] img`);
+  const game = rawLibrary.find((g) => g.name === gameName);
+  if (game) {
+    game.cover = newUrl;
+    if (!game.banner) game.banner = newUrl;
+  }
+
+  const cardImg = document.querySelector(
+    `[data-game-name="${cssEscape(gameName)}"] img`,
+  );
   if (cardImg) cardImg.src = newUrl;
+
+  const detailImg = document.getElementById("list-detail-cover");
+  if (detailImg && selectedListGameName === gameName) detailImg.src = newUrl;
 }
 
 function renderFullLibrary(games) {
   const container = document.getElementById("game-library");
   container.innerHTML = "";
-  if (games && games.length > 0) games.forEach((game) => addGameToUI(game));
+  container.classList.toggle("grid-view", currentViewMode === "grid");
+  container.classList.toggle("list-view", currentViewMode === "list");
+  applyInterfacePreferences();
+
+  if (!games || games.length === 0) {
+    selectedListGameName = null;
+    container.innerHTML = `
+      <div class="empty-library-state">
+        <h2>Nenhum jogo encontrado</h2>
+        <p>Adicione um jogo ou ajuste sua busca para ver a biblioteca.</p>
+      </div>
+    `;
+    return;
+  }
+
+  if (currentViewMode === "list") {
+    renderListLibrary(games);
+    return;
+  }
+
+  games.forEach((game) => addGameToUI(game));
 }
 
-window.addEventListener("pywebviewready", () => {
-  const toggleBtn = document.getElementById("grid-view");
+function renderListLibrary(games) {
+  const container = document.getElementById("game-library");
 
-  if (toggleBtn) {
-    toggleBtn.disabled = true;
-    toggleBtn.style.opacity = "0.5";
-    toggleBtn.style.cursor = "not-allowed";
-
-    setTimeout(() => {
-      toggleBtn.disabled = false;
-      toggleBtn.style.opacity = "1";
-      toggleBtn.style.cursor = "pointer";
-    }, 5000);
+  if (!selectedListGameName || !games.some((game) => game.name === selectedListGameName)) {
+    selectedListGameName = games[0].name;
   }
-  setTimeout(() => handleAction("LOAD_LIBRARY"), 100);
+
+  const selectedGame = games.find((game) => game.name === selectedListGameName) || games[0];
+  container.innerHTML = `
+    <section class="library-list-shell">
+      <aside class="library-list-sidebar">
+        <div class="library-list-heading">
+          <span>${games.length} jogos</span>
+        </div>
+        <div class="library-list-items">
+          ${games.map((game) => renderListRow(game)).join("")}
+        </div>
+      </aside>
+      <section id="library-detail-panel" class="library-detail-panel">
+        ${renderListDetail(selectedGame)}
+      </section>
+    </section>
+  `;
+}
+
+function renderListRow(game) {
+  const displayName = game.alias && game.alias.trim() !== "" ? game.alias : game.name;
+  const isSelected = game.name === selectedListGameName;
+  const missingClass = game.is_missing ? "missing" : "";
+
+  return `
+    <button class="library-list-row ${isSelected ? "active" : ""} ${missingClass}" data-game-name="${escapeHtml(game.name)}" onclick='selectListGame(${toJsArg(game.name)})'>
+      <img src="${game.cover}" alt="${escapeHtml(displayName)}">
+      <span title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
+      <small>${escapeHtml(game.size || "--")}</small>
+    </button>
+  `;
+}
+
+function renderListDetail(game) {
+  const displayName = game.alias && game.alias.trim() !== "" ? game.alias : game.name;
+  const playtimeLabel = getPlaytimeLabel(game);
+  const banner = game.banner || game.cover;
+  const playArgs = `${toJsArg(game.path.replace(/\\/g, "/"))}, ${toJsArg(displayName)}`;
+  const menuArgs = `${toJsArg(game.name)}, ${toJsArg(game.alias || "")}`;
+  const missingMessage = getMissingGameMessage(game);
+  const playButtonAttrs = game.is_missing
+    ? 'disabled title="Jogo indisponivel"'
+    : `onclick='handleAction("PLAY", ${playArgs})'`;
+
+  return `
+    <div class="library-detail-hero">
+      <img id="list-detail-cover" src="${banner}" alt="${escapeHtml(displayName)}">
+      ${missingMessage ? `<div class="missing-game-badge list-detail">${escapeHtml(missingMessage)}</div>` : ""}
+      <div class="library-detail-shade"></div>
+      <div class="library-detail-content">
+        <span class="library-detail-kicker">Selecionado</span>
+        <h2 title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</h2>
+        <div class="library-detail-meta">
+          <span>${escapeHtml(game.size || "Tamanho desconhecido")}</span>
+          <span>${escapeHtml(playtimeLabel)}</span>
+        </div>
+        <div class="library-detail-actions">
+          <button class="library-play-button" ${playButtonAttrs}>
+            <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M20.4086 9.35258C22.5305 10.5065 22.5305 13.4935 20.4086 14.6474L7.59662 21.6145C5.53435 22.736 3 21.2763 3 18.9671L3 5.0329C3 2.72368 5.53435 1.26402 7.59661 2.38548L20.4086 9.35258Z"
+                    fill="currentColor"></path>
+            </svg>
+            Jogar
+          </button>
+          <button class="library-options-button" onclick='showOptionsMenu(event, ${menuArgs})' title="Opções">...</button>
+        </div>
+      </div>
+    </div>
+    <div class="library-detail-info">
+      <div>
+        <span>Arquivo</span>
+        <p title="${escapeHtml(game.path)}">${escapeHtml(game.path)}</p>
+      </div>
+      <div>
+        <span>Tamanho</span>
+        <p>${escapeHtml(game.size || "Nao calculado")}</p>
+      </div>
+      <div>
+        <span>Horas jogadas</span>
+        <p>${escapeHtml(playtimeLabel)}</p>
+      </div>
+    </div>
+  `;
+}
+
+function getPlaytimeLabel(game) {
+  if (game.playtime_display) return game.playtime_display;
+
+  const value = game.playtime || game.hours_played || game.hoursPlayed;
+  if (value === undefined || value === null || value === "") return "Nao registrado";
+
+  const text = String(value);
+  if (/hora|h|registrado/i.test(text)) return text;
+  return `${text} h jogadas`;
+}
+
+function getMissingGameMessage(game) {
+  if (!game || !game.is_missing) return "";
+  return `Jogo nao encontrado no Disco '${game.missing_drive || "?"}'`;
+}
+
+window.selectListGame = function (gameName) {
+  selectedListGameName = gameName;
+  renderFullLibrary(getVisibleLibrary());
+};
+
+function getVisibleLibrary() {
+  let filtered = [...rawLibrary];
+  const searchTerm = document
+    .getElementById("search-input")
+    .value.toLowerCase();
+  const sortVal = currentSortMode;
+
+  if (searchTerm) {
+    filtered = filtered.filter((g) => {
+      const name = (g.alias || g.name).toLowerCase();
+      return name.includes(searchTerm);
+    });
+  }
+
+  filtered.sort((a, b) => {
+    const nameA = (a.alias || a.name).toLowerCase();
+    const nameB = (b.alias || b.name).toLowerCase();
+
+    if (sortVal === "az") return nameA.localeCompare(nameB);
+    if (sortVal === "za") return nameB.localeCompare(nameA);
+
+    if (sortVal === "size-desc") return parseSizeToMB(b.size) - parseSizeToMB(a.size);
+    if (sortVal === "size-asc") return parseSizeToMB(a.size) - parseSizeToMB(b.size);
+    return 0;
+  });
+
+  return filtered;
+}
+
+function parseSizeToMB(sizeStr) {
+  if (!sizeStr) return 0;
+
+  const size = parseFloat(sizeStr.replace(",", ".")) || 0;
+  const unit = sizeStr.toUpperCase();
+
+  if (unit.includes("GB")) return size * 1024;
+  if (unit.includes("TB")) return size * 1024 * 1024;
+  return size;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function toJsArg(value) {
+  return JSON.stringify(String(value ?? "")).replace(/</g, "\\u003c");
+}
+
+function cssEscape(value) {
+  if (window.CSS && window.CSS.escape) return window.CSS.escape(value);
+  return String(value).replace(/"/g, '\\"');
+}
+
+function renderDefaultViewToggle(mode) {
+  const normalizedMode = mode === "list" ? "list" : "grid";
+  const gridBtn = document.getElementById("default-view-grid");
+  const listBtn = document.getElementById("default-view-list");
+
+  if (!gridBtn || !listBtn) return;
+
+  gridBtn.classList.toggle("active", normalizedMode === "grid");
+  listBtn.classList.toggle("active", normalizedMode === "list");
+}
+
+function getInterfaceSettingsPayload() {
+  return {
+    interface_view_mode: currentSettings.interface_view_mode === "list" ? "list" : "grid",
+    interface_card_size: ["small", "medium", "large"].includes(currentSettings.interface_card_size)
+      ? currentSettings.interface_card_size
+      : "medium",
+    interface_show_card_size: currentSettings.interface_show_card_size !== false,
+    interface_list_density: currentSettings.interface_list_density === "compact" ? "compact" : "comfortable",
+  };
+}
+
+function applyInterfacePreferences() {
+  const container = document.getElementById("game-library");
+  if (!container) return;
+
+  const settings = getInterfaceSettingsPayload();
+  container.classList.toggle("card-size-small", settings.interface_card_size === "small");
+  container.classList.toggle("card-size-medium", settings.interface_card_size === "medium");
+  container.classList.toggle("card-size-large", settings.interface_card_size === "large");
+  container.classList.toggle("hide-card-size", !settings.interface_show_card_size);
+  container.classList.toggle("list-density-compact", settings.interface_list_density === "compact");
+  container.classList.toggle("list-density-comfortable", settings.interface_list_density === "comfortable");
+}
+
+function renderInterfaceControls() {
+  const settings = getInterfaceSettingsPayload();
+
+  renderDefaultViewToggle(settings.interface_view_mode);
+
+  ["small", "medium", "large"].forEach((size) => {
+    const btn = document.getElementById(`card-size-${size}`);
+    if (btn) btn.classList.toggle("active", settings.interface_card_size === size);
+  });
+
+  ["compact", "comfortable"].forEach((density) => {
+    const btn = document.getElementById(`list-density-${density}`);
+    if (btn) btn.classList.toggle("active", settings.interface_list_density === density);
+  });
+
+  const sizeToggle = document.getElementById("show-card-size-toggle");
+  if (sizeToggle) {
+    sizeToggle.classList.toggle("active", settings.interface_show_card_size);
+    sizeToggle.setAttribute("aria-pressed", String(settings.interface_show_card_size));
+  }
+}
+
+async function saveInterfacePreferences(showToast = true) {
+  const payload = getInterfaceSettingsPayload();
+  const success = await window.pywebview.api.save_interface_settings(payload);
+  if (showToast) {
+    window.showNotification(
+      success ? "Preferencia de interface salva!" : "Erro ao salvar interface",
+      success ? "success" : "error",
+    );
+  }
+  return success;
+}
+
+window.setDefaultViewMode = async function (mode) {
+  const normalizedMode = mode === "list" ? "list" : "grid";
+  currentSettings = {
+    ...currentSettings,
+    interface_view_mode: normalizedMode,
+  };
+
+  renderInterfaceControls();
+
+  if (currentViewMode !== normalizedMode) {
+    currentViewMode = normalizedMode;
+    applyInterfacePreferences();
+    renderFullLibrary(getVisibleLibrary());
+  }
+
+  await saveInterfacePreferences();
+};
+
+window.setCardSizePreference = async function (size) {
+  currentSettings = {
+    ...currentSettings,
+    interface_card_size: ["small", "medium", "large"].includes(size) ? size : "medium",
+  };
+  renderInterfaceControls();
+  applyInterfacePreferences();
+  if (currentViewMode === "grid") renderFullLibrary(getVisibleLibrary());
+  await saveInterfacePreferences();
+};
+
+window.toggleCardSizeVisibility = async function () {
+  currentSettings = {
+    ...currentSettings,
+    interface_show_card_size: currentSettings.interface_show_card_size === false,
+  };
+  renderInterfaceControls();
+  applyInterfacePreferences();
+  if (currentViewMode === "grid") renderFullLibrary(getVisibleLibrary());
+  await saveInterfacePreferences();
+};
+
+window.setListDensityPreference = async function (density) {
+  currentSettings = {
+    ...currentSettings,
+    interface_list_density: density === "compact" ? "compact" : "comfortable",
+  };
+  renderInterfaceControls();
+  applyInterfacePreferences();
+  if (currentViewMode === "list") renderFullLibrary(getVisibleLibrary());
+  await saveInterfacePreferences();
+};
+
+window.addEventListener("pywebviewready", () => {
+  setTimeout(async () => {
+    await loadInterfaceSettings();
+    handleAction("LOAD_LIBRARY");
+  }, 100);
 });
+
+async function loadInterfaceSettings() {
+  if (!window.pywebview || !window.pywebview.api) return;
+
+  try {
+    currentSettings = await window.pywebview.api.get_settings();
+    const defaultView = currentSettings.interface_view_mode === "list" ? "list" : "grid";
+    currentViewMode = defaultView;
+    renderInterfaceControls();
+    applyInterfacePreferences();
+  } catch (err) {
+    console.error("Erro ao carregar configuracoes de interface:", err);
+  }
+}
 
 window.toggleSettings = async function () {
   const modal = document.getElementById("settings-modal");
@@ -305,8 +682,10 @@ window.toggleSettings = async function () {
     renderUpdateState();
     // Antes de mostrar, busca o que está salvo no Python
     const settings = await window.pywebview.api.get_settings();
+    currentSettings = settings || {};
     document.getElementById("api-key-input").value =
       settings.steamgrid_key || "";
+    renderInterfaceControls();
     modal.classList.remove("hidden");
 
     // busca a versão do App
@@ -314,6 +693,11 @@ window.toggleSettings = async function () {
       const versionElement = document.getElementById("app-version-display");
       if (versionElement) {
         versionElement.innerText = version;
+      }
+
+      const aboutVersionElement = document.getElementById("about-version-display");
+      if (aboutVersionElement) {
+        aboutVersionElement.innerText = version;
       }
     });
   } else {
@@ -422,17 +806,44 @@ window.removeToast = function (toast) {
 };
 
 window.updateCardImage = function (gameName, base64Data) {
-  const cards = document.querySelectorAll(".game-card");
-  cards.forEach((card) => {
-    if (card.querySelector("h3").innerText.trim() === gameName) {
-      const img = card.querySelector("img");
-      if (img) img.src = base64Data;
-    }
-  });
-
   const game = rawLibrary.find((g) => g.name === gameName);
   if (game) {
     game.cover = base64Data;
+    if (!game.banner) game.banner = base64Data;
+  }
+
+  const img = document.querySelector(`[data-game-name="${cssEscape(gameName)}"] img`);
+  if (img) img.src = base64Data;
+
+  const detailImg = document.getElementById("list-detail-cover");
+  if (detailImg && selectedListGameName === gameName) {
+    const selectedGame = rawLibrary.find((g) => g.name === gameName);
+    if (!selectedGame || !selectedGame.banner || selectedGame.banner === base64Data) {
+      detailImg.src = base64Data;
+    }
+  }
+};
+
+window.updateGameBanner = function (gameName, base64Data) {
+  const game = rawLibrary.find((g) => g.name === gameName);
+  if (game) {
+    game.banner = base64Data;
+  }
+
+  const detailImg = document.getElementById("list-detail-cover");
+  if (detailImg && selectedListGameName === gameName) {
+    detailImg.src = base64Data;
+  }
+};
+
+window.updateGamePlaytime = function (gameName, playtimeLabel) {
+  const game = rawLibrary.find((g) => g.name === gameName);
+  if (game) {
+    game.playtime_display = playtimeLabel;
+  }
+
+  if (selectedListGameName === gameName && currentViewMode === "list") {
+    renderFullLibrary(getVisibleLibrary());
   }
 };
 
@@ -537,47 +948,7 @@ function applyFilters() {
   clearTimeout(filterTimeout);
 
   filterTimeout = setTimeout(() => {
-    let filtered = [...rawLibrary];
-    const searchTerm = document
-      .getElementById("search-input")
-      .value.toLowerCase();
-    const sortVal = currentSortMode;
-
-    if (searchTerm) {
-      filtered = filtered.filter((g) => {
-        const name = (g.alias || g.name).toLowerCase();
-        return name.includes(searchTerm);
-      });
-    }
-
-    const parseToMB = (sizeStr) => {
-      if (!sizeStr) return 0;
-
-      const size = parseFloat(sizeStr.replace(",", ".")) || 0;
-      const unit = sizeStr.toUpperCase();
-
-      if (unit.includes("GB")) {
-        return size * 1024; // Converte GB para MB
-      }
-      if (unit.includes("TB")) {
-        return size * 1024 * 1024; // Converte TB para MB
-      }
-
-      return size;
-    };
-
-    filtered.sort((a, b) => {
-      const nameA = (a.alias || a.name).toLowerCase();
-      const nameB = (b.alias || b.name).toLowerCase();
-
-      if (sortVal === "az") return nameA.localeCompare(nameB);
-      if (sortVal === "za") return nameB.localeCompare(nameA);
-
-      if (sortVal === "size-desc") return parseToMB(b.size) - parseToMB(a.size);
-      if (sortVal === "size-asc") return parseToMB(a.size) - parseToMB(b.size);
-    });
-
-    renderFullLibrary(filtered);
+    renderFullLibrary(getVisibleLibrary());
   }, 100);
 }
 
@@ -652,9 +1023,11 @@ function toggleMaxIcon() {
 window.switchTab = function (tabName) {
   const apiTab = document.getElementById("tab-api");
   const updateTab = document.getElementById("tab-updates");
+  const interfaceTab = document.getElementById("tab-interface");
   const aboutTab = document.getElementById("tab-about");
   const apiContent = document.getElementById("content-api");
   const updateContent = document.getElementById("content-updates");
+  const interfaceContent = document.getElementById("content-interface");
   const aboutContent = document.getElementById("content-about");
   const btnSave = document.getElementById("btn-save-settings");
   const actionsSpace = document.getElementById("actions-space");
@@ -677,8 +1050,12 @@ window.switchTab = function (tabName) {
       aboutTab.classList.remove("border-blue-500", "text-blue-400");
       aboutTab.classList.add("border-transparent", "text-slate-400");
 
+      interfaceTab.classList.remove("border-blue-500", "text-blue-400");
+      interfaceTab.classList.add("border-transparent", "text-slate-400");
+
       // Visibilidade
       updateContent.classList.add("hidden");
+      interfaceContent.classList.add("hidden");
       aboutContent.classList.add("hidden");
       apiContent.classList.remove("hidden");
       btnSave.classList.remove("hidden");
@@ -701,13 +1078,40 @@ window.switchTab = function (tabName) {
       aboutTab.classList.remove("border-blue-500", "text-blue-400");
       aboutTab.classList.add("border-transparent", "text-slate-400");
 
+      interfaceTab.classList.remove("border-blue-500", "text-blue-400");
+      interfaceTab.classList.add("border-transparent", "text-slate-400");
+
       // Visibilidade
       apiContent.classList.add("hidden");
+      interfaceContent.classList.add("hidden");
       aboutContent.classList.add("hidden");
       updateContent.classList.remove("hidden");
       btnSave.classList.add("hidden");
       actionsSpace.classList.add("hidden");
       
+
+      break;
+    case "interface":
+
+      interfaceTab.classList.add("border-blue-500", "text-blue-400");
+      interfaceTab.classList.remove("border-transparent", "text-slate-400");
+
+      apiTab.classList.remove("border-blue-500", "text-blue-400");
+      apiTab.classList.add("border-transparent", "text-slate-400");
+
+      updateTab.classList.remove("border-blue-500", "text-blue-400");
+      updateTab.classList.add("border-transparent", "text-slate-400");
+
+      aboutTab.classList.remove("border-blue-500", "text-blue-400");
+      aboutTab.classList.add("border-transparent", "text-slate-400");
+
+      apiContent.classList.add("hidden");
+      updateContent.classList.add("hidden");
+      aboutContent.classList.add("hidden");
+      interfaceContent.classList.remove("hidden");
+      actionsSpace.classList.add("hidden");
+
+      renderDefaultViewToggle(currentSettings.interface_view_mode || currentViewMode);
 
       break;
     case "about":
@@ -724,9 +1128,13 @@ window.switchTab = function (tabName) {
       updateTab.classList.remove("border-blue-500", "text-blue-400");
       updateTab.classList.add("border-transparent", "text-slate-400");
 
+      interfaceTab.classList.remove("border-blue-500", "text-blue-400");
+      interfaceTab.classList.add("border-transparent", "text-slate-400");
+
       // Visibilidade
       apiContent.classList.add("hidden");
       updateContent.classList.add("hidden");
+      interfaceContent.classList.add("hidden");
       aboutContent.classList.remove("hidden");
       actionsSpace.classList.add("hidden");
       

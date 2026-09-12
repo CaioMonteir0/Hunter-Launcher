@@ -26,6 +26,13 @@ import base64
 from pathlib import Path
 
 class SettingsManager:
+    default_settings = {
+        "steamgrid_key": "",
+        "interface_view_mode": "grid",
+        "interface_card_size": "medium",
+        "interface_show_card_size": True,
+        "interface_list_density": "comfortable"
+    }
     
     def encrypt_string(self,plain_text: str) -> str:
         data = plain_text.encode("utf-8")
@@ -46,7 +53,7 @@ class SettingsManager:
     def _ensure_settings_file(self):
         if not os.path.exists(self.settings_path):
             with open(self.settings_path, 'w', encoding='utf-8') as f:
-                json.dump({"steamgrid_key": ""}, f, indent=4)
+                json.dump(self.default_settings, f, indent=4)
 
     def get_settings(self):
         try:
@@ -59,12 +66,18 @@ class SettingsManager:
                 except:
                     data["steamgrid_key"] = ""
 
-            return data
+            merged = self.default_settings.copy()
+            merged.update(data)
+            return merged
         except:
-            return {"steamgrid_key": ""}
+            return self.default_settings.copy()
 
     def save_settings(self, settings_data):
         try:
+            current_settings = self.get_settings()
+            current_settings.update(settings_data)
+            settings_data = current_settings
+
             if "steamgrid_key" in settings_data and settings_data["steamgrid_key"]:
                 settings_data["steamgrid_key"] = self.encrypt_string(settings_data["steamgrid_key"])
 

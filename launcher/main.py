@@ -101,16 +101,99 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
 
     def get_library(self):
         print("Obtendo biblioteca...")
-        games = self._load_db()
+        games = self._validate_library_paths(self._load_db())
         display_list = []
         for g in games:
             display_game = g.copy()
-            display_game['cover'] = self._get_image_base64(g.get('cover', ''))
+            cover_base64 = self._get_image_base64(g.get('cover', ''))
+            banner_path = g.get('banner', '')
+
+            display_game['cover'] = cover_base64
+            display_game['banner'] = (
+                self._get_image_base64(banner_path, (960, 540))
+                if banner_path and os.path.exists(banner_path)
+                else cover_base64
+            )
+            display_game['playtime_display'] = self._format_playtime(g.get('playtime_seconds', 0))
             display_list.append(display_game)
 
         # Thread para baixar capas automáticas
         threading.Thread(target=self._auto_fix_covers, daemon=True).start()
         return display_list
+
+    def _validate_library_paths(self, games):
+        valid_games = []
+        changed = False
+
+        for g in games:
+            game_path = g.get('path', '')
+            if not game_path or os.path.exists(game_path):
+                if g.get('is_missing') or g.get('missing_drive'):
+                    changed = True
+                g['is_missing'] = False
+                g['missing_drive'] = ""
+                valid_games.append(g)
+                continue
+
+            drive = self._get_path_drive(game_path)
+            if drive and not os.path.exists(drive):
+                g['is_missing'] = True
+                g['missing_drive'] = drive.rstrip("\\/")
+                valid_games.append(g)
+                changed = True
+                continue
+
+            print(f"Removendo jogo com caminho inexistente: {g.get('name')} -> {game_path}")
+            self.delete_old_cover(g.get('cover'))
+            self.delete_old_cover(g.get('banner'))
+            changed = True
+
+        if changed:
+            self._save_db(valid_games)
+
+        return valid_games
+
+    def _get_path_drive(self, path):
+        drive, _ = os.path.splitdrive(path)
+        if drive:
+            return drive + "\\"
+        return ""
+
+    def _format_playtime(self, seconds):
+        try:
+            seconds = int(seconds or 0)
+        except Exception:
+            seconds = 0
+
+        if seconds <= 0:
+            return "Nao registrado"
+
+        minutes = max(1, round(seconds / 60))
+        if minutes < 60:
+            return f"{minutes} min jogados"
+
+        hours = minutes / 60
+        if hours < 10:
+            return f"{hours:.1f} h jogadas"
+        return f"{round(hours)} h jogadas"
+
+    def record_play_session(self, game_path, elapsed_seconds):
+        games = self._load_db()
+        normalized_path = game_path.replace('\\', '/')
+
+        for g in games:
+            if g.get('path', '').replace('\\', '/') == normalized_path:
+                g['playtime_seconds'] = int(g.get('playtime_seconds', 0) or 0) + int(elapsed_seconds)
+                g['last_played_at'] = int(time.time())
+                self._save_db(games)
+
+                if self._window:
+                    self._window.evaluate_js(
+                        f"if(window.updateGamePlaytime) window.updateGamePlaytime({json.dumps(g['name'])}, {json.dumps(self._format_playtime(g['playtime_seconds']))})"
+                    )
+                return True
+
+        return False
 
     def add_game(self):
        
@@ -137,7 +220,9 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
             "name": game_name,
             "path": file_path,
             "size": self.get_folder_size(file_path),
-            "cover": self.no_cover_path 
+            "cover": self.no_cover_path,
+            "banner": "",
+            "playtime_seconds": 0
         }
 
         games = self._load_db()
@@ -148,6 +233,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         
         display_game = new_game.copy()
         display_game['cover'] = self._get_image_base64(self.no_cover_path)
+        display_game['banner'] = display_game['cover']
         
         # Tenta buscar a capa assim que adiciona
         threading.Thread(target=self._auto_fix_covers, daemon=True).start()
@@ -183,6 +269,26 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
 
         return result
 
+    def save_interface_settings(self, data):
+        view_mode = data.get("interface_view_mode", "grid")
+        if view_mode not in ("grid", "list"):
+            view_mode = "grid"
+
+        card_size = data.get("interface_card_size", "medium")
+        if card_size not in ("small", "medium", "large"):
+            card_size = "medium"
+
+        list_density = data.get("interface_list_density", "comfortable")
+        if list_density not in ("compact", "comfortable"):
+            list_density = "comfortable"
+
+        return self.save_settings({
+            "interface_view_mode": view_mode,
+            "interface_card_size": card_size,
+            "interface_show_card_size": bool(data.get("interface_show_card_size", True)),
+            "interface_list_density": list_density
+        })
+
   
     
     def delete_game_request(self, game_name, mode):
@@ -214,6 +320,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
 
             # Limpa a capa do cache antes de remover do DB
             self.delete_old_cover(target_game.get('cover'))
+            self.delete_old_cover(target_game.get('banner'))
             
             # Salva o novo banco sem o jogo
             self._save_db(new_games)
@@ -221,7 +328,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
             return True
         return False
 
-    def _auto_fix_covers(self):
+    def _auto_fix_covers_legacy(self):
         if self.is_fixing_covers:
             print("[AUTOFIX] Já existe uma verificação rodando. Abortando.")
             return
@@ -270,13 +377,91 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
             self.is_fixing_covers = False
             
 
-    def open_search_window(self, game_name, game_title_or_alias):
+    def _auto_fix_covers(self):
+        if self.is_fixing_covers:
+            print("[AUTOFIX] Ja existe uma verificacao rodando. Abortando.")
+            return
+
+        self.is_fixing_covers = True
+        try:
+            games = self._load_db()
+            updated = False
+
+            for g in games:
+                if g.get('is_missing'):
+                    continue
+
+                current_cover = g.get('cover', '')
+                current_banner = g.get('banner', '')
+                searcher = None
+
+                needs_cover_fix = (
+                    current_cover == self.no_cover_path or
+                    not current_cover or
+                    not os.path.exists(current_cover)
+                )
+                needs_banner_fix = (
+                    not current_banner or
+                    not os.path.exists(current_banner)
+                )
+
+                if needs_cover_fix:
+                    print(f"Buscando capa automatica para: {g['name']}")
+                    searcher = searcher or SearchApi(self, g['name'])
+                    results = searcher.search_steamgrid(g['name'])
+
+                    if results and results.get('images'):
+                        local_path = searcher.download_and_save_cover(results.get('images', [])[0])
+
+                        if local_path:
+                            if current_cover and current_cover != self.no_cover_path:
+                                self.delete_old_cover(current_cover)
+
+                            g['cover'] = local_path
+                            updated = True
+
+                            new_base64 = self._get_image_base64(local_path)
+                            if self._window:
+                                self._window.evaluate_js(
+                                    f"if(window.updateCardImage) window.updateCardImage({json.dumps(g['name'])}, {json.dumps(new_base64)})"
+                                )
+
+                if needs_banner_fix:
+                    print(f"Buscando banner automatico para: {g['name']}")
+                    searcher = searcher or SearchApi(self, g['name'])
+                    banner_url = searcher.search_steamgrid_banner(g['name'])
+
+                    if banner_url:
+                        banner_path = searcher.download_and_save_banner(banner_url)
+
+                        if banner_path:
+                            if current_banner:
+                                self.delete_old_cover(current_banner)
+
+                            g['banner'] = banner_path
+                            updated = True
+
+                            banner_base64 = self._get_image_base64(banner_path, (960, 540))
+                            if self._window:
+                                self._window.evaluate_js(
+                                    f"if(window.updateGameBanner) window.updateGameBanner({json.dumps(g['name'])}, {json.dumps(banner_base64)})"
+                                )
+
+            if updated:
+                self._save_db(games)
+
+        finally:
+            self.is_fixing_covers = False
+
+
+    def open_search_window(self, game_name, game_title_or_alias=None, asset_type="cover"):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         search_html = os.path.join(current_dir, 'gui', 'search.html')
-        search_api = SearchApi(self, game_name)
+        search_api = SearchApi(self, game_name, asset_type)
+        asset_label = "Banner" if asset_type == "banner" else "Capa"
         
         search_win = webview.create_window(
-            f'Buscar Capa: {game_name}', 
+            f'Buscar {asset_label}: {game_name}',
             search_html,
             js_api=search_api,
             width=500,
@@ -288,8 +473,13 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
       
         def on_loaded():
             
-            safe_title = game_title_or_alias.replace("'", "\\'")
-            js_code = f"document.getElementById('search-window-title').innerText = '{safe_title}';"
+            title = game_title_or_alias or game_name
+            safe_title = title.replace("'", "\\'")
+            js_code = (
+                f"window.searchAssetType = '{asset_type}';"
+                f"document.getElementById('search-window-title').innerText = 'Buscar {asset_label}: {safe_title}';"
+                f"if(window.configureAssetSearch) window.configureAssetSearch('{asset_type}');"
+            )
             search_win.evaluate_js(js_code)
         search_win.events.loaded += on_loaded
         
@@ -298,7 +488,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
     def close_search_window(self, game_name):
         
         for win in list(webview.windows): 
-            if f"Buscar Capa: {game_name}" in win.title:
+            if game_name in win.title and "Buscar" in win.title:
                 try:
                     win.destroy()
                     break # Para após fechar a janela correta

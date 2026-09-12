@@ -173,7 +173,7 @@
     <div class="main-content">
 
         <main id="game-library"
-            class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4 p-6">
+            class="grid-view grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4 p-6">
         </main>
 
         <div id="loader"
@@ -264,6 +264,56 @@
                 </div>
             </div>
 
+            <div class="relative group">
+                <button
+                    class="w-full text-left px-4 py-2 hover:bg-blue-600 flex items-center justify-between transition">
+                    <div class="flex items-center gap-2">
+                        <span>
+                            <svg width="18px" height="18px" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <rect x="3" y="5" width="18" height="14" rx="2" stroke="#ffffff" stroke-width="1.5"></rect>
+                                <path d="M7 15L10 12L12 14L15 10L18 15" stroke="#ffffff" stroke-width="1.5"
+                                    stroke-linecap="round" stroke-linejoin="round"></path>
+                            </svg>
+                        </span> Alterar Banner
+                    </div>
+                    <span>❯</span>
+                </button>
+
+                <div id="banner-submenu"
+                    class="absolute top-0 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-2xl py-2 hidden group-hover:block z-50">
+                    <button onclick="window.handleBannerChoice('online')"
+                        class="w-full text-left px-4 py-2 hover:bg-blue-600 flex items-center gap-2 transition">
+                        <span>
+                            <svg width="18px" height="18px" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M14 5H20" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"
+                                    stroke-linejoin="round"></path>
+                                <path d="M14 8H17" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"
+                                    stroke-linejoin="round"></path>
+                                <path
+                                    d="M21 11.5C21 16.75 16.75 21 11.5 21C6.25 21 2 16.75 2 11.5C2 6.25 6.25 2 11.5 2"
+                                    stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"
+                                    stroke-linejoin="round"></path>
+                                <path d="M22 22L20 20" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"
+                                    stroke-linejoin="round"></path>
+                            </svg>
+                        </span> Buscar Online
+                    </button>
+                    <button onclick="window.handleBannerChoice('local')"
+                        class="w-full text-left px-4 py-2 hover:bg-blue-600 flex items-center gap-2 transition border-t border-slate-700/50">
+                        <span>
+                            <svg fill="#ffffff" width="18px" height="18px" viewBox="0 0 1920 1920"
+                                xmlns="http://www.w3.org/2000/svg" stroke="#ffffff">
+                                <path
+                                    d="m494.165 640.333-278.4 890.774 101.867 31.786L572.459 747h1211.306l-183.36 917.12c-5.013 24.853-26.986 42.88-52.266 42.88H159.979c-29.334 0-53.334-23.893-53.334-53.333v-1440h454.507L732.779 427h760.533v106.667h106.667V320.333H783.872L612.139 107H-.021v1546.667c0 88.213 71.786 160 160 160h1388.16c75.946 0 141.973-54.08 156.906-128.64l208.96-1044.694H494.165Z"
+                                    fill-rule="evenodd"></path>
+                            </svg>
+                        </span> Arquivo Local
+                    </button>
+                </div>
+            </div>
+
             <hr class="my-2 border-slate-700/50">
 
             <button onclick="window.renameGame()" id="change-name-button"
@@ -280,6 +330,20 @@
                         </g>
                     </svg>
                 </span> Mudar nome do jogo
+            </button>
+
+            <button onclick="window.openSelectedGameLocation()" id="open-location-button"
+                class="w-full text-left px-4 py-2 hover:bg-slate-700 flex items-center gap-2 transition text-white">
+                <span>
+                    <svg width="18px" height="18px" viewBox="0 0 24 24" fill="none"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 6.5C4 5.67157 4.67157 5 5.5 5H10L12 7H18.5C19.3284 7 20 7.67157 20 8.5V17.5C20 18.3284 19.3284 19 18.5 19H5.5C4.67157 19 4 18.3284 4 17.5V6.5Z"
+                            stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path>
+                        <path d="M9 13H15M15 13L12.5 10.5M15 13L12.5 15.5"
+                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                            stroke-linejoin="round"></path>
+                    </svg>
+                </span> Abrir local do arquivo
             </button>
 
             <button onclick="window.removeGame('launcher')" id="remove-from-launcher-button"
@@ -360,6 +424,10 @@
                     <button onclick="switchTab('updates')" id="tab-updates"
                         class="flex-1 py-3 text-xs uppercase font-bold tracking-wider transition-all border-b-2 border-transparent text-slate-400 hover:text-slate-200">
                         Atualizações
+                    </button>
+                    <button onclick="switchTab('interface')" id="tab-interface"
+                        class="flex-1 py-3 text-xs uppercase font-bold tracking-wider transition-all border-b-2 border-transparent text-slate-400 hover:text-slate-200">
+                        Interface
                     </button>
                     <button onclick="switchTab('about')" id="tab-about"
                         class="flex-1 py-3 text-xs uppercase font-bold tracking-wider transition-all border-b-2 border-transparent text-slate-400 hover:text-slate-200">
@@ -479,6 +547,69 @@
                         </div>
                     </div>
 
+                    <div id="content-interface" class="hidden space-y-5 py-2">
+                        <div class="flex items-center justify-between gap-4 bg-slate-900/50 border border-slate-700 rounded-lg p-4">
+                            <div>
+                                <p class="text-sm font-semibold text-white">Visualizacao padrao</p>
+                                <p class="text-xs text-slate-500 mt-1">Escolha como a biblioteca abre ao iniciar o launcher.</p>
+                            </div>
+
+                            <div id="default-view-toggle"
+                                class="interface-toggle flex bg-slate-950 border border-slate-700 rounded-lg p-1">
+                                <button id="default-view-grid" onclick="window.setDefaultViewMode('grid')"
+                                    class="interface-toggle-option active">
+                                    Card
+                                </button>
+                                <button id="default-view-list" onclick="window.setDefaultViewMode('list')"
+                                    class="interface-toggle-option">
+                                    Lista
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-4 bg-slate-900/50 border border-slate-700 rounded-lg p-4">
+                            <div>
+                                <p class="text-sm font-semibold text-white">Tamanho dos cards</p>
+                                <p class="text-xs text-slate-500 mt-1">Ajuste a escala dos jogos no modo card.</p>
+                            </div>
+
+                            <div class="interface-toggle flex bg-slate-950 border border-slate-700 rounded-lg p-1">
+                                <button id="card-size-small" onclick="window.setCardSizePreference('small')"
+                                    class="interface-toggle-option">Pequeno</button>
+                                <button id="card-size-medium" onclick="window.setCardSizePreference('medium')"
+                                    class="interface-toggle-option active">Medio</button>
+                                <button id="card-size-large" onclick="window.setCardSizePreference('large')"
+                                    class="interface-toggle-option">Grande</button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-4 bg-slate-900/50 border border-slate-700 rounded-lg p-4">
+                            <div>
+                                <p class="text-sm font-semibold text-white">Mostrar tamanho no card</p>
+                                <p class="text-xs text-slate-500 mt-1">Exibe ou oculta o tamanho do jogo sobre a capa.</p>
+                            </div>
+
+                            <button id="show-card-size-toggle" onclick="window.toggleCardSizeVisibility()"
+                                class="interface-switch active" aria-pressed="true">
+                                <span></span>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-4 bg-slate-900/50 border border-slate-700 rounded-lg p-4">
+                            <div>
+                                <p class="text-sm font-semibold text-white">Densidade da lista</p>
+                                <p class="text-xs text-slate-500 mt-1">Escolha uma lista compacta ou mais confortavel.</p>
+                            </div>
+
+                            <div class="interface-toggle flex bg-slate-950 border border-slate-700 rounded-lg p-1">
+                                <button id="list-density-compact" onclick="window.setListDensityPreference('compact')"
+                                    class="interface-toggle-option">Compacta</button>
+                                <button id="list-density-comfortable" onclick="window.setListDensityPreference('comfortable')"
+                                    class="interface-toggle-option active">Confortavel</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div id="content-about" class="hidden py-4 animate-fade-in">
                         <div class=" space-y-6 text-left">
 
@@ -498,7 +629,7 @@
 
                                 </div>
 
-                                <p class="text-slate-500 text-xs mt-1 uppercase tracking-widest">Versão 1.0.0</p>
+                                <p class="text-slate-500 text-xs mt-1 uppercase tracking-widest">Versao <span id="about-version-display">1.0.0</span></p>
                             </div>
 
                             <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/50">
@@ -580,7 +711,7 @@
         class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
         <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl w-full max-w-md shadow-2xl scale-in">
             <div class="flex items-center gap-3 mb-4">
-                <span id="confirm-icon" class="text-2xl">⚠️</span>
+                <span id="confirm-icon" class="text-2xl">&#9888;&#65039;</span>
                 <h2 id="confirm-title" class="text-xl font-bold text-white">Confirmação</h2>
             </div>
 

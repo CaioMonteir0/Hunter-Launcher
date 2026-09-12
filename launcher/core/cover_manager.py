@@ -49,6 +49,29 @@ class CoverManager:
             print(f"Erro ao trocar capa local: {e}")
             
         return None
+
+    def change_banner_local(self, game_name):
+        """Abre seletor de arquivos para trocar banner por uma imagem local."""
+        if not game_name:
+            return None
+
+        file_types = ('Imagens (*.jpg;*.png;*.jpeg;*.webp)',)
+
+        try:
+            result = self._window.create_file_dialog(
+                webview.FileDialog.OPEN,
+                allow_multiple=False,
+                file_types=file_types
+            )
+
+            if result:
+                new_path = result[0].replace('\\', '/')
+                self.update_game_banner(game_name, new_path)
+                return self._get_image_base64(new_path, (960, 540))
+        except Exception as e:
+            print(f"Erro ao trocar banner local: {e}")
+
+        return None
     
    
     def delete_old_cover(self, path):
@@ -75,5 +98,16 @@ class CoverManager:
                 g['cover'] = new_path
                 break
         self._save_db(games)
-        
-        
+
+    def update_game_banner(self, game_name, new_path):
+        """Atualiza o banner no banco e gerencia a limpeza do arquivo anterior."""
+        print(f"Atualizando banner de '{game_name}' para '{new_path}'")
+        games = self._load_db()
+        for g in games:
+            if g['name'] == game_name:
+                old_path = g.get('banner')
+                if old_path and old_path != new_path:
+                    self.delete_old_cover(old_path)
+                g['banner'] = new_path
+                break
+        self._save_db(games)
