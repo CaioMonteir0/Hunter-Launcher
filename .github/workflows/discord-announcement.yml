@@ -13,10 +13,8 @@ jobs:
         with:
           webhook_url: ${{ secrets.DISCORD_WEBHOOK }}
           message: "📢 **Nova Release do Hunter Launcher Disponível!** @everyone \nConfiram as novidades que acabaram de sair direto do forno!"
-          
-          
           embed_title: "🚀 ${{ github.event.release.name }} (${{ github.event.release.tag_name }})"
-          embed_description: "Confira o changelog completo clicando no link abaixo."
+          embed_description: ${{ github.event.release.body }}
           embed_url: ${{ github.event.release.html_url }}
           embed_color: "3447003" 
-          embed_author_name: "GitHub Actions"
+          embed_author_name: "Hunter Launcher Updates"
