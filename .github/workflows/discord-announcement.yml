@@ -1,0 +1,20 @@
+name: Notificar Release no Discord
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  discord-notification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar mensagem personalizada
+        uses: tsickert/discord-webhook@v5.3.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          content: "📢 **Nova Release do Hunter Launcher Disponível!** @everyone \nConfiram as novidades que acabaram de sair direto do forno!"
+          embed-title: "🚀 ${{ github.event.release.name }} (${{ github.event.release.tag_name }})"
+          embed-description: ${{ github.event.release.body }}
+          embed-url: ${{ github.event.release.html_url }}
+          embed-color: "3447003" 
+          embed-author-name: "Hunter Launcher Updates"
