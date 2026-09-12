@@ -706,6 +706,40 @@
 
     <div id="notification-container" class="fixed bottom-5 right-5 z-[9999] flex flex-col gap-3"></div>
 
+    <div id="add-game-screen"
+        class="hidden fixed inset-0 bg-slate-950/95 backdrop-blur-sm z-[105] flex items-center justify-center p-6">
+        <section class="add-game-panel">
+            <header class="add-game-header">
+                <div>
+                    <h2>Adicionar jogos</h2>
+                    <p>Selecione itens instalados no Windows para adicionar à biblioteca.</p>
+                </div>
+                <button onclick="window.closeAddGameScreen()" title="Fechar">×</button>
+            </header>
+
+            <div class="add-game-toolbar">
+                <input id="installed-games-search" type="text" placeholder="Buscar programa instalado"
+                    oninput="window.filterInstalledGames()">
+                <button onclick="handleAction('MANUAL_ADD_GAME')">Adicionar jogo manualmente</button>
+            </div>
+
+            <div class="add-game-summary">
+                <span id="installed-games-count"></span>
+                <label class="installed-games-select-all">
+                    <input id="installed-games-select-all" type="checkbox" onchange="window.toggleInstalledGamesSelection(this.checked)">
+                    <span>Marcar todos</span>
+                </label>
+            </div>
+
+            <div id="installed-games-list" class="installed-games-list"></div>
+
+            <footer class="add-game-footer">
+                <button onclick="window.closeAddGameScreen()">Cancelar</button>
+                <button onclick="window.importSelectedInstalledGames()">Adicionar selecionados</button>
+            </footer>
+        </section>
+    </div>
+
 
     <div id="confirm-modal"
         class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">

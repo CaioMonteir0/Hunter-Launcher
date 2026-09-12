@@ -24,6 +24,7 @@ import webview
 import threading
 import ctypes, json
 import time
+import winreg
 
 
 # módulos da pasta core
@@ -75,7 +76,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         self.all_windows = []
         self.is_fixing_covers = False
         self.updater = Updater(self)
-        self.current_version = "1.1.0"
+        self.current_version = "1.1.1"
         self.pending_update_url = None
         self._window = None
         
@@ -126,6 +127,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
                 if banner_path and os.path.exists(banner_path)
                 else cover_base64
             )
+            display_game['is_running'] = self._normalize_game_path(g.get('path', '')) in self._running_games
             display_game['playtime_display'] = self._format_playtime(g.get('playtime_seconds', 0))
             display_list.append(display_game)
 
@@ -191,10 +193,10 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
 
     def record_play_session(self, game_path, elapsed_seconds):
         games = self._load_db()
-        normalized_path = game_path.replace('\\', '/')
+        normalized_path = self._normalize_game_path(game_path)
 
         for g in games:
-            if g.get('path', '').replace('\\', '/') == normalized_path:
+            if self._normalize_game_path(g.get('path', '')) == normalized_path:
                 g['playtime_seconds'] = int(g.get('playtime_seconds', 0) or 0) + int(elapsed_seconds)
                 g['last_played_at'] = int(time.time())
                 self._save_db(games)
@@ -227,6 +229,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
             return None
         
         game_name = os.path.basename(os.path.dirname(file_path))
+        detected_source = self.detect_game_source(file_path)
         
         new_game = {
             "name": game_name,
@@ -234,7 +237,9 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
             "size": self.get_folder_size(file_path),
             "cover": self.no_cover_path,
             "banner": "",
-            "playtime_seconds": 0
+            "playtime_seconds": 0,
+            "source": detected_source["source"],
+            "source_confidence": detected_source["confidence"]
         }
 
         games = self._load_db()
@@ -251,6 +256,227 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         threading.Thread(target=self._auto_fix_covers, daemon=True).start()
         self._window.evaluate_js(f"window.showNotification('Jogo adicionado: {game_name}', 'success')")
         return display_game
+
+    def get_installed_games(self):
+        games = self._load_db()
+        existing_paths = {self._normalize_game_path(g.get('path', '')) for g in games}
+        installed = []
+        seen_paths = set()
+
+        for entry in self._read_uninstall_entries():
+            name = entry.get("name", "").strip()
+            install_location = entry.get("install_location", "").strip()
+            display_icon = entry.get("display_icon", "").strip()
+            exe_path = self._resolve_installed_game_exe(display_icon, install_location)
+
+            if not name or not exe_path or not os.path.exists(exe_path):
+                continue
+
+            normalized_path = self._normalize_game_path(exe_path)
+            if normalized_path in seen_paths:
+                continue
+            seen_paths.add(normalized_path)
+
+            detected_source = self._detect_source_from_text(self._registry_entry_text(entry))
+            folder_source = self.detect_game_source(exe_path)
+            if folder_source["source"] == detected_source["source"]:
+                detected_source["confidence"] += folder_source["confidence"]
+
+            installed.append({
+                "name": name,
+                "path": exe_path.replace('\\', '/'),
+                "size": self.get_folder_size(exe_path),
+                "source": detected_source["source"],
+                "source_confidence": detected_source["confidence"],
+                "already_added": normalized_path in existing_paths
+            })
+
+        installed.sort(key=lambda item: item["name"].lower())
+        print(f"[ADD_GAME] Programas e Recursos retornou {len(installed)} itens.")
+        for item in installed[:5]:
+            print(f"[ADD_GAME] Item: {item.get('name')} -> {item.get('path')}")
+        return installed
+
+    def add_installed_games(self, selected_games):
+        if not selected_games:
+            return {"added": 0, "skipped": 0}
+
+        games = self._load_db()
+        existing_paths = {self._normalize_game_path(g.get('path', '')) for g in games}
+        added = 0
+        skipped = 0
+
+        for selected in selected_games:
+            file_path = selected.get("path", "").replace('\\', '/')
+            normalized_path = self._normalize_game_path(file_path)
+            if not file_path or not os.path.exists(file_path) or normalized_path in existing_paths:
+                skipped += 1
+                continue
+
+            detected_source = self.detect_game_source(file_path)
+            game_name = selected.get("name") or os.path.basename(os.path.dirname(file_path))
+            new_game = {
+                "name": game_name,
+                "path": file_path,
+                "size": self.get_folder_size(file_path),
+                "cover": self.no_cover_path,
+                "banner": "",
+                "playtime_seconds": 0,
+                "source": detected_source["source"],
+                "source_confidence": detected_source["confidence"]
+            }
+            games.append(new_game)
+            existing_paths.add(normalized_path)
+            added += 1
+
+        if added:
+            self._save_db(games)
+            threading.Thread(target=self._auto_fix_covers, daemon=True).start()
+
+        return {"added": added, "skipped": skipped}
+
+    def _read_uninstall_entries(self):
+        roots = (
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"),
+            (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"),
+            (winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"),
+        )
+
+        for root, subkey in roots:
+            try:
+                with winreg.OpenKey(root, subkey) as parent:
+                    for index in range(winreg.QueryInfoKey(parent)[0]):
+                        try:
+                            child_name = winreg.EnumKey(parent, index)
+                            with winreg.OpenKey(parent, child_name) as child:
+                                yield {
+                                    "name": self._read_registry_value(child, "DisplayName"),
+                                    "install_location": self._read_registry_value(child, "InstallLocation"),
+                                    "display_icon": self._read_registry_value(child, "DisplayIcon"),
+                                    "publisher": self._read_registry_value(child, "Publisher"),
+                                    "uninstall_string": self._read_registry_value(child, "UninstallString"),
+                                    "quiet_uninstall_string": self._read_registry_value(child, "QuietUninstallString"),
+                                    "install_source": self._read_registry_value(child, "InstallSource"),
+                                    "url_info_about": self._read_registry_value(child, "URLInfoAbout"),
+                                    "registry_key": child_name,
+                                }
+                        except OSError:
+                            continue
+            except OSError:
+                continue
+
+    def _read_registry_value(self, key, value_name):
+        try:
+            value, _ = winreg.QueryValueEx(key, value_name)
+            return str(value or "")
+        except OSError:
+            return ""
+
+    def _resolve_installed_game_exe(self, display_icon, install_location):
+        icon_path = self._clean_display_icon_path(display_icon)
+        if (
+            icon_path and
+            icon_path.lower().endswith(".exe") and
+            os.path.exists(icon_path) and
+            not self._is_helper_exe(os.path.basename(icon_path))
+        ):
+            return icon_path
+
+        install_location = install_location.strip().strip('"')
+        if install_location and os.path.isdir(install_location):
+            candidates = []
+            for dirpath, dirnames, filenames in os.walk(install_location):
+                rel_path = os.path.relpath(dirpath, install_location)
+                depth = 0 if rel_path == "." else rel_path.count(os.sep) + 1
+                if depth > 2:
+                    dirnames[:] = []
+                    continue
+
+                for filename in filenames:
+                    if filename.lower().endswith(".exe"):
+                        full_path = os.path.join(dirpath, filename)
+                        if not self._is_helper_exe(filename):
+                            candidates.append(full_path)
+
+                if len(candidates) >= 12:
+                    break
+
+            if candidates:
+                candidates.sort(key=lambda path: (self._is_launcher_exe(os.path.basename(path)), len(path)))
+                return candidates[0]
+
+        return ""
+
+    def _clean_display_icon_path(self, display_icon):
+        value = display_icon.strip()
+        if not value:
+            return ""
+
+        if value.startswith('"'):
+            end_quote = value.find('"', 1)
+            if end_quote != -1:
+                return value[1:end_quote]
+
+        lower_value = value.lower()
+        exe_index = lower_value.find(".exe")
+        if exe_index != -1:
+            return value[:exe_index + 4].strip().strip('"')
+
+        return value.split(",")[0].strip().strip('"')
+
+    def _looks_like_game_entry(self, entry, exe_path):
+        name = entry.get("name", "")
+        text = f"{self._registry_entry_text(entry)} {exe_path}".lower()
+        blocked = (
+            "redistributable", "runtime", "driver", "sdk", "visual c++", "microsoft edge",
+            "webview", "update", "updater", "uninstall", "launcher", "service",
+            "steam", "ea app", "gog galaxy", "ubisoft connect", "battle.net"
+        )
+        if any(term in name.lower() for term in blocked):
+            return False
+
+        hints = (
+            "steam", "epic games", "gog", "galaxy", "ubisoft", "uplay", "origin",
+            "electronic arts", "ea app", "eadesktop", "battle.net", "blizzard", "rockstar"
+        )
+        if any(hint in text for hint in hints):
+            return True
+
+        return self._detect_source_from_text(text)["source"] != "unknown"
+
+    def _registry_entry_text(self, entry):
+        return " ".join(str(value or "") for value in entry.values())
+
+    def _detect_source_from_text(self, text):
+        normalized_text = text.lower()
+        source_terms = {
+            "steam": ("steam", "steamapps", "valve"),
+            "epic": ("epic games", "epicgames", ".egstore", "eossdk"),
+            "gog": ("gog galaxy", "gog.com", "galaxyclient"),
+            "ubisoft": ("ubisoft", "uplay", "ubisoft connect"),
+            "ea": ("electronic arts", "ea app", "eadesktop", "origin"),
+            "rockstar": ("rockstar", "social club", "socialclub"),
+            "battlenet": ("battle.net", "blizzard"),
+        }
+
+        for source, terms in source_terms.items():
+            if any(term in normalized_text for term in terms):
+                return {"source": source, "confidence": 4}
+
+        return {"source": "unknown", "confidence": 0}
+
+    def _is_helper_exe(self, filename):
+        lower_name = filename.lower()
+        helper_terms = (
+            "unins", "uninstall", "setup", "install", "redist", "crash", "report",
+            "launcher", "updater", "update", "helper", "service", "bootstrap",
+            "7z", "7za", "vcredist", "dxsetup", "dotnet", "repair", "cleanup"
+        )
+        return any(term in lower_name for term in helper_terms)
+
+    def _is_launcher_exe(self, filename):
+        lower_name = filename.lower()
+        return "launcher" in lower_name or "bootstrap" in lower_name or "updater" in lower_name
 
    
     

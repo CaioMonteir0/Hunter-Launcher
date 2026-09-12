@@ -49,6 +49,10 @@ async function handleAction(action, data = null, gameName = null) {
 
   switch (action) {
     case "ADD_GAME":
+      window.openAddGameScreen();
+      break;
+
+    case "MANUAL_ADD_GAME":
       loader.classList.remove("hidden");
       try {
         const newGame = await window.pywebview.api.add_game();
@@ -57,6 +61,7 @@ async function handleAction(action, data = null, gameName = null) {
           rawLibrary = games || [];
 
           applyFilters();
+          if (window.closeAddGameScreen) window.closeAddGameScreen();
         }
       } catch (err) {
         console.error("Erro ao adicionar jogo:", err);
@@ -72,6 +77,15 @@ async function handleAction(action, data = null, gameName = null) {
         window.showNotification("Iniciando " + gameName + "...", "success");
       } else {
         window.showNotification("Falha ao iniciar jogo", "error");
+      }
+      break;
+
+    case "STOP_GAME":
+      const stopped = await window.pywebview.api.stop_game(data);
+      if (stopped) {
+        window.showNotification("Encerrando " + gameName + "...", "success");
+      } else {
+        window.showNotification("Nao foi possivel encerrar o jogo", "error");
       }
       break;
 
@@ -265,13 +279,22 @@ function addGameToUI(game) {
   const container = document.getElementById("game-library");
   const displayName =
     game.alias && game.alias.trim() !== "" ? game.alias : game.name;
+  const isRunning = Boolean(game.is_running);
   const playArgs = `${toJsArg(game.path.replace(/\\/g, "/"))}, ${toJsArg(displayName)}`;
   const menuArgs = `${toJsArg(game.name)}, ${toJsArg(game.alias || "")}`;
   const missingMessage = getMissingGameMessage(game);
   const missingClass = game.is_missing ? "game-missing" : "";
-  const playHandler = game.is_missing ? "" : `ondblclick='handleAction("PLAY", ${playArgs})'`;
-  const playDisabledClass = game.is_missing ? "opacity-40 cursor-not-allowed" : "hover:text-blue-500";
-  const playButtonAction = game.is_missing ? "" : `onclick='handleAction("PLAY", ${playArgs})'`;
+  const playHandler = game.is_missing || isRunning ? "" : `ondblclick='handleAction("PLAY", ${playArgs})'`;
+  const playDisabledClass = game.is_missing || isRunning ? "opacity-40 cursor-not-allowed" : "hover:text-blue-500";
+  const playButtonAction = game.is_missing || isRunning ? "disabled" : `onclick='handleAction("PLAY", ${playArgs})'`;
+  const stopButton = isRunning
+    ? `<button title="Encerrar jogo" onclick='handleAction("STOP_GAME", ${playArgs})'
+            class="text-red-400 hover:text-red-300 transition-colors duration-200 outline-none ml-4">
+        <svg width="15px" height="15px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"></rect>
+        </svg>
+      </button>`
+    : "";
 
   const cardHtml = `
         <div class="game-card ${missingClass} group relative overflow-hidden rounded-xl bg-slate-800/50 border border-slate-700/50" data-game-name="${escapeHtml(game.name)}" ${playHandler}>
@@ -294,6 +317,7 @@ function addGameToUI(game) {
                   fill="currentColor"></path>
         </svg>
     </button>
+    ${stopButton}
 
     <button onclick='showOptionsMenu(event, ${menuArgs})'
             class="text-slate-400 hover:text-white transition-colors duration-200 outline-none ml-4" title="Opções">
@@ -406,12 +430,25 @@ function renderListDetail(game) {
   const displayName = game.alias && game.alias.trim() !== "" ? game.alias : game.name;
   const playtimeLabel = getPlaytimeLabel(game);
   const banner = game.banner || game.cover;
+  const isRunning = Boolean(game.is_running);
   const playArgs = `${toJsArg(game.path.replace(/\\/g, "/"))}, ${toJsArg(displayName)}`;
   const menuArgs = `${toJsArg(game.name)}, ${toJsArg(game.alias || "")}`;
   const missingMessage = getMissingGameMessage(game);
   const playButtonAttrs = game.is_missing
     ? 'disabled title="Jogo indisponivel"'
-    : `onclick='handleAction("PLAY", ${playArgs})'`;
+    : isRunning
+      ? 'disabled title="Jogo em execucao"'
+      : `onclick='handleAction("PLAY", ${playArgs})'`;
+  const playButtonClass = isRunning ? "library-play-button is-running" : "library-play-button";
+  const playButtonText = isRunning ? "Em execucao" : "Jogar";
+  const stopButton = isRunning
+    ? `<button class="library-stop-button" onclick='handleAction("STOP_GAME", ${playArgs})' title="Encerrar jogo">
+        <svg width="15px" height="15px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"></rect>
+        </svg>
+        Encerrar
+      </button>`
+    : "";
 
   return `
     <div class="library-detail-hero">
@@ -426,13 +463,14 @@ function renderListDetail(game) {
           <span>${escapeHtml(playtimeLabel)}</span>
         </div>
         <div class="library-detail-actions">
-          <button class="library-play-button" ${playButtonAttrs}>
+          <button class="${playButtonClass}" ${playButtonAttrs}>
             <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M20.4086 9.35258C22.5305 10.5065 22.5305 13.4935 20.4086 14.6474L7.59662 21.6145C5.53435 22.736 3 21.2763 3 18.9671L3 5.0329C3 2.72368 5.53435 1.26402 7.59661 2.38548L20.4086 9.35258Z"
                     fill="currentColor"></path>
             </svg>
-            Jogar
+            ${playButtonText}
           </button>
+          ${stopButton}
           <button class="library-options-button" onclick='showOptionsMenu(event, ${menuArgs})' title="Opções">...</button>
         </div>
       </div>
@@ -525,12 +563,155 @@ function escapeHtml(value) {
 }
 
 function toJsArg(value) {
-  return JSON.stringify(String(value ?? "")).replace(/</g, "\\u003c");
+  return JSON.stringify(String(value ?? ""))
+    .replace(/</g, "\\u003c")
+    .replace(/'/g, "\\u0027");
 }
 
 function cssEscape(value) {
   if (window.CSS && window.CSS.escape) return window.CSS.escape(value);
   return String(value).replace(/"/g, '\\"');
+}
+
+window.openAddGameScreen = async function () {
+  const screen = document.getElementById("add-game-screen");
+  const list = document.getElementById("installed-games-list");
+  const count = document.getElementById("installed-games-count");
+  const search = document.getElementById("installed-games-search");
+
+  screen.classList.remove("hidden");
+  search.value = "";
+  list.innerHTML = '<div class="installed-games-loading">Buscando jogos instalados...</div>';
+  count.innerText = "";
+
+  try {
+    const installedGames = await window.pywebview.api.get_installed_games();
+    window.installedGamesCache = installedGames || [];
+    console.log("[ADD_GAME] Itens recebidos:", window.installedGamesCache.length, window.installedGamesCache.slice(0, 5));
+    window.renderInstalledGames(window.installedGamesCache);
+    console.log("[ADD_GAME] Render concluido");
+  } catch (err) {
+    console.error("[ADD_GAME] Erro ao buscar/renderizar itens instalados:", err);
+    const message = err && err.message ? err.message : String(err);
+    list.innerHTML = `<div class="installed-games-empty">Nao foi possivel buscar itens instalados.<br><small>${escapeHtml(message)}</small></div>`;
+  }
+};
+
+window.closeAddGameScreen = function () {
+  document.getElementById("add-game-screen").classList.add("hidden");
+};
+
+window.renderInstalledGames = function (games) {
+  const list = document.getElementById("installed-games-list");
+  const count = document.getElementById("installed-games-count");
+  const visibleGames = games || [];
+
+  console.log("[ADD_GAME] Renderizando lista:", visibleGames.length);
+  count.innerText = `${visibleGames.length} itens detectados`;
+
+  if (!visibleGames.length) {
+    list.innerHTML = '<div class="installed-games-empty">Nenhum item instalado foi encontrado no Registro.</div>';
+    refreshInstalledGamesSelectAll();
+    return;
+  }
+
+  const rows = [];
+  for (let index = 0; index < visibleGames.length; index++) {
+    const game = visibleGames[index] || {};
+    try {
+      const name = String(game.name || "Item sem nome");
+      const path = String(game.path || "");
+      const size = String(game.size || "Tamanho desconhecido");
+      const rawSource = String(game.source || "unknown");
+      const cacheIndex = (window.installedGamesCache || []).findIndex((cached) => String((cached || {}).path || "") === path);
+      const source = rawSource && rawSource !== "unknown" ? rawSource.toUpperCase() : "Local";
+      const alreadyAdded = Boolean(game.already_added);
+      const disabled = alreadyAdded ? "disabled" : "";
+      const rowClass = alreadyAdded ? "installed-game-row already-added" : "installed-game-row";
+      const checked = alreadyAdded ? "" : "checked";
+
+      rows.push(`
+        <label class="${rowClass}">
+          <input type="checkbox" data-installed-index="${cacheIndex}" onchange="window.updateInstalledGamesSelectAll()" ${checked} ${disabled}>
+          <div>
+            <strong>${escapeHtml(name)}</strong>
+            <span>${escapeHtml(source)} | ${escapeHtml(size)}</span>
+            <small title="${escapeHtml(path)}">${escapeHtml(path)}</small>
+          </div>
+          ${alreadyAdded ? '<em>Adicionado</em>' : ""}
+        </label>
+      `);
+    } catch (err) {
+      console.error("[ADD_GAME] Erro ao renderizar item:", index, game, err);
+      rows.push(`
+        <div class="installed-games-empty">
+          Erro ao renderizar item ${index + 1}.<br>
+          <small>${escapeHtml(err && err.message ? err.message : String(err))}</small>
+        </div>
+      `);
+    }
+  }
+
+  list.innerHTML = rows.join("");
+
+  refreshInstalledGamesSelectAll();
+};
+
+window.filterInstalledGames = function () {
+  const searchTerm = document.getElementById("installed-games-search").value.toLowerCase();
+  const games = (window.installedGamesCache || []).filter((game) => {
+    const item = game || {};
+    const name = String(item.name || "").toLowerCase();
+    const path = String(item.path || "").toLowerCase();
+    return name.includes(searchTerm) || path.includes(searchTerm);
+  });
+
+  window.renderInstalledGames(games);
+};
+
+window.importSelectedInstalledGames = async function () {
+  const checked = Array.from(document.querySelectorAll("#installed-games-list input[type='checkbox']:checked"));
+  const selectedGames = checked
+    .map((input) => (window.installedGamesCache || [])[Number(input.dataset.installedIndex)])
+    .filter(Boolean);
+
+  if (!selectedGames.length) {
+    window.showNotification("Selecione pelo menos um jogo", "warning");
+    return;
+  }
+
+  const result = await window.pywebview.api.add_installed_games(selectedGames);
+  const added = result?.added || 0;
+  const skipped = result?.skipped || 0;
+
+  window.showNotification(`${added} jogo(s) adicionado(s). ${skipped} ignorado(s).`, added ? "success" : "warning");
+  const games = await window.pywebview.api.get_library();
+  rawLibrary = games || [];
+  applyFilters();
+  window.closeAddGameScreen();
+};
+
+window.toggleInstalledGamesSelection = function (checked) {
+  document.querySelectorAll("#installed-games-list input[type='checkbox']:not(:disabled)").forEach((input) => {
+    input.checked = checked;
+  });
+  refreshInstalledGamesSelectAll();
+};
+
+window.updateInstalledGamesSelectAll = function () {
+  refreshInstalledGamesSelectAll();
+};
+
+function refreshInstalledGamesSelectAll() {
+  const selectAll = document.getElementById("installed-games-select-all");
+  if (!selectAll) return;
+
+  const checkboxes = Array.from(document.querySelectorAll("#installed-games-list input[type='checkbox']:not(:disabled)"));
+  const checked = checkboxes.filter((input) => input.checked);
+
+  selectAll.disabled = checkboxes.length === 0;
+  selectAll.checked = checkboxes.length > 0 && checked.length === checkboxes.length;
+  selectAll.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
 }
 
 function renderDefaultViewToggle(mode) {
@@ -846,6 +1027,23 @@ window.updateGamePlaytime = function (gameName, playtimeLabel) {
     renderFullLibrary(getVisibleLibrary());
   }
 };
+
+window.updateGameRunning = function (gameName, gamePath, isRunning) {
+  const normalizedPath = normalizeGamePath(gamePath);
+  const game = rawLibrary.find(
+    (g) => g.name === gameName || normalizeGamePath(g.path) === normalizedPath,
+  );
+
+  if (game) {
+    game.is_running = Boolean(isRunning);
+  }
+
+  renderFullLibrary(getVisibleLibrary());
+};
+
+function normalizeGamePath(path) {
+  return String(path || "").replace(/\\/g, "/").toLowerCase();
+}
 
 /**
  * Abre o modal de confirmação genérico
