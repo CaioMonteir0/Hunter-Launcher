@@ -24,13 +24,17 @@ jobs:
         run: |
           TAG_NAME="${{ github.event.release.tag_name || github.ref_name }}"
           
-          # Busca limpa via GitHub CLI salvando direto em variáveis de ambiente do Step
           echo "RELEASE_TITLE=$(gh release view "$TAG_NAME" --json name -q .name 2>/dev/null || echo "Hunter Launcher $TAG_NAME")" >> $GITHUB_ENV
           echo "RELEASE_URL=$(gh release view "$TAG_NAME" --json url -q .url 2>/dev/null || echo "https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME")" >> $GITHUB_ENV
           echo "RELEASE_TAG=$TAG_NAME" >> $GITHUB_ENV
           
-          # Salva o corpo (changelog) em um arquivo de texto isolado para evitar estouro de buffer e quebras de sintaxe
+          # Salva o changelog em um arquivo temporário
           gh release view "$TAG_NAME" --json body -q .body 2>/dev/null > changelog.txt || echo "Confiram as novidades no repositório!" > changelog.txt
+
+          # Carrega o conteúdo multilinha do changelog para uma variável de ambiente segura
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+          cat changelog.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Enviar mensagem para o Discord
         uses: tsickert/discord-webhook@v5.3.0
@@ -38,7 +42,7 @@ jobs:
           webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
           content: "📢 **Nova Release do Hunter Launcher Disponível!** @everyone \nConfiram as novidades que acabaram de sair direto do forno!"
           embed-title: "🚀 ${{ env.RELEASE_TITLE }} (${{ env.RELEASE_TAG }})"
-          embed-description-file: "changelog.txt"
+          embed-description: ${{ env.RELEASE_BODY }}
           embed-url: ${{ env.RELEASE_URL }}
           embed-color: "3447003" 
           embed-author-name: "Hunter Launcher Updates"
