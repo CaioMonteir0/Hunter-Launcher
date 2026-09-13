@@ -6,18 +6,49 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   discord-notification:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - name: Enviar mensagem personalizada
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Obter dados da Release (Changelog)
+        id: release_data
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Pega a tag atual que disparou o workflow ou usa a última tag
+          TAG_NAME="${{ github.event.release.tag_name || github.ref_name }}"
+          
+          echo "Buscando dados para a tag: $TAG_NAME"
+          
+          # Tenta buscar o corpo e o título da release via GitHub CLI
+          BODY=$(gh release view "$TAG_NAME" --json body -q .body 2>/dev/null || echo "Confiram as novidades no repositório!")
+          TITLE=$(gh release view "$TAG_NAME" --json name -q .name 2>/dev/null || echo "Hunter Launcher $TAG_NAME")
+          URL=$(gh release view "$TAG_NAME" --json url -q .url 2>/dev/null || echo "https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME")
+
+          # Trata quebras de linha para o formato compatível com o GitHub Actions
+          BODY="${BODY//'%'/'%25'}"
+          BODY="${BODY//$'\n'/'%0A'}"
+          BODY="${BODY//$'\r'/'%0D'}"
+
+          echo "release_body=$BODY" >> $GITHUB_OUTPUT
+          echo "release_title=$TITLE" >> $GITHUB_OUTPUT
+          echo "release_url=$URL" >> $GITHUB_OUTPUT
+          echo "release_tag=$TAG_NAME" >> $GITHUB_OUTPUT
+
+      - name: Enviar mensagem para o Discord
         uses: tsickert/discord-webhook@v5.3.0
         with:
           webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
           content: "📢 **Nova Release do Hunter Launcher Disponível!** @everyone \nConfiram as novidades que acabaram de sair direto do forno!"
-          embed-title: "🚀 ${{ github.event.release.name }} (${{ github.event.release.tag_name }})"
-          embed-description: ${{ github.event.release.body }}
-          embed-url: ${{ github.event.release.html_url }}
+          embed-title: "🚀 ${{ steps.release_data.outputs.release_title }} (${{ steps.release_data.outputs.release_tag }})"
+          embed-description: ${{ steps.release_data.outputs.release_body }}
+          embed-url: ${{ steps.release_data.outputs.release_url }}
           embed-color: "3447003" 
           embed-author-name: "Hunter Launcher Updates"
