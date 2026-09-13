@@ -76,7 +76,7 @@ class Api(DatabaseManager, SettingsManager, LauncherLogic, CoverManager):
         self.all_windows = []
         self.is_fixing_covers = False
         self.updater = Updater(self)
-        self.current_version = "1.1.1"
+        self.current_version = "1.2.0"
         self.pending_update_url = None
         self._window = None
         
