@@ -3,7 +3,19 @@ name: Notificar Release no Discord
 on:
   release:
     types: [published]
-  workflow_dispatch: # Adicionado para permitir testes manuais
+  push:
+    tags:
+      - 'v*' # Gatilho infalível para automações futuras
+  workflow_dispatch:
+    inputs:
+      manual_version:
+        description: 'Nome da Versão'
+        required: true
+        default: 'Hunter Launcher v1.2.0'
+      manual_tag:
+        description: 'Nome da Tag'
+        required: true
+        default: 'v1.2.0'
 
 jobs:
   discord-notification:
@@ -14,8 +26,8 @@ jobs:
         with:
           webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
           content: "📢 **Nova Release do Hunter Launcher Disponível!** @everyone \nConfiram as novidades que acabaram de sair direto do forno!"
-          embed-title: "🚀 ${{ github.event.release.name || 'Teste Manual' }} (${{ github.event.release.tag_name || 'v.Teste' }})"
-          embed-description: ${{ github.event.release.body || 'Descrição gerada por gatilho manual.' }}
-          embed-url: ${{ github.event.release.html_url || 'https://github.com/CaioMonteir0/Hunter-Launcher' }}
+          embed-title: "🚀 ${{ github.event.release.name || inputs.manual_version }} (${{ github.event.release.tag_name || inputs.manual_tag }})"
+          embed-description: ${{ github.event.release.body || 'As notas de atualização completas já estão disponíveis no repositório!' }}
+          embed-url: ${{ github.event.release.html_url || format('https://github.com/CaioMonteir0/Hunter-Launcher/releases/tag/{0}', inputs.manual_tag) }}
           embed-color: "3447003" 
           embed-author-name: "Hunter Launcher Updates"
